@@ -49,6 +49,20 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     modeHeading = '六十秒一閃・成績';
     modeTitle = `${score} 点獲得！`;
     modeSubtitle = score >= 400 ? '神速の言霊使い' : 'さらなる速度を磨け';
+  } else if (gameMode === 'daily') {
+    modeHeading = '日課祓い・記録';
+    modeTitle = '日課成就！';
+    modeSubtitle =
+      profile.dailyStreak > 0
+        ? `連続 ${profile.dailyStreak} 日の修練、本日分を記録せり`
+        : '本日の修練を完了せり';
+  } else if (gameMode === 'suddendeath') {
+    modeHeading = '斬撃一閃・記録';
+    modeTitle = `${score} 連続正解！`;
+    modeSubtitle =
+      score > 0 && score >= profile.suddenDeathBest
+        ? '自己最高記録に到達せり'
+        : '一撃に散れど、次こそは';
   }
 
   return (
@@ -118,6 +132,28 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                 {score}
               </span>
             </div>
+          )}
+          {gameMode === 'daily' && (
+            <div className="stat-col">
+              <span className="stat-label">連続日数</span>
+              <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
+                {profile.dailyStreak} 日
+              </span>
+            </div>
+          )}
+          {gameMode === 'suddendeath' && (
+            <>
+              <div className="stat-col">
+                <span className="stat-label">連続正解</span>
+                <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
+                  {score}
+                </span>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">自己最高</span>
+                <span className="stat-value">{profile.suddenDeathBest}</span>
+              </div>
+            </>
           )}
 
           <div className="stat-col">

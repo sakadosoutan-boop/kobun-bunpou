@@ -62,7 +62,7 @@ export interface GrammarEntry {
 }
 
 export type ScreenState = 'title' | 'battle' | 'result';
-export type GameMode = 'story' | 'endless' | 'timeattack';
+export type GameMode = 'story' | 'endless' | 'timeattack' | 'daily' | 'suddendeath';
 
 export interface CourtRank {
   title: string;
@@ -86,4 +86,10 @@ export interface PlayerProfile {
   totalCorrect: number;
   cardMastery: Record<string, number>;
   unlockedTitles: string[];
+  /** 日課祓い（daily）を最後に完了した日 'YYYY-MM-DD'（未実施なら空文字） */
+  dailyLastDate: string;
+  /** 日課祓いの連続実施日数 */
+  dailyStreak: number;
+  /** 斬撃一閃（suddendeath）の最高連続正解数 */
+  suddenDeathBest: number;
 }

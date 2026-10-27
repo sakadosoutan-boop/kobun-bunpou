@@ -18,6 +18,15 @@ import {
   checkNewTitles,
 } from './data';
 import { loadPlayerProfile, savePlayerProfile, DEFAULT_PROFILE } from './storage';
+import { getModeDefinition } from './modes/registry';
+import {
+  DailyQuestion,
+  applyDailyCompletion,
+  generateDailyQuestions,
+  getDateKey,
+  getYesterdayKey,
+  pickDailyStageIndex,
+} from './modes/daily';
 import { sound } from './sound';
 import { SakuraCanvas } from './components/SakuraCanvas';
 import { TitleScreen } from './components/TitleScreen';
@@ -83,6 +92,13 @@ export const App: React.FC = () => {
   const currentProblemRef = useRef<VerbProblem | null>(null);
   const currentKakariRef = useRef<KakariProblem | null>(null);
 
+  // Daily mode (日課祓い): date-seeded question queue
+  const dailyQueueRef = useRef<DailyQuestion[]>([]);
+  const dailyIndexRef = useRef(0);
+
+  // Sudden-death mode (斬撃一閃): current streak of consecutive correct answers
+  const streakRef = useRef(0);
+
   // Load saved profile on startup
   useEffect(() => {
     const loaded = loadPlayerProfile();
@@ -120,6 +136,30 @@ export const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [screen, gameMode]);
 
+  // Build the 4 choices for a verb-connection problem (1 correct connection + 3 others)
+  const buildVerbChoices = (problem: VerbProblem): ChoiceOption[] => {
+    const correctCards = AUXILIARY_CARDS.filter((c) => c.conn === problem.targetConn);
+    const wrongCards = AUXILIARY_CARDS.filter((c) => c.conn !== problem.targetConn);
+
+    const pickedCorrect = correctCards[Math.floor(Math.random() * correctCards.length)];
+    const shuffledWrongs = [...wrongCards].sort(() => 0.5 - Math.random()).slice(0, 3);
+    const hand = [pickedCorrect, ...shuffledWrongs].sort(() => 0.5 - Math.random());
+
+    return hand.map((card) => ({
+      text: card.name,
+      sub: `${card.conn}接続<br>${card.mean}`,
+      isCorrect: card.conn === problem.targetConn,
+      conn: card.conn,
+    }));
+  };
+
+  // Build the 4 choices for a kakari-musubi problem
+  const buildKakariChoices = (kakari: KakariProblem): ChoiceOption[] =>
+    [
+      { text: kakari.correct.text, sub: kakari.correct.sub, isCorrect: true },
+      ...kakari.wrongs.map((w) => ({ text: w.text, sub: w.sub, isCorrect: false })),
+    ].sort(() => 0.5 - Math.random());
+
   // Normal turn generator
   const setupNormalTurn = useCallback(() => {
     isFeverRef.current = false;
@@ -132,21 +172,7 @@ export const App: React.FC = () => {
     setTargetWord(problem.word);
     setTargetForm(problem.form);
 
-    const correctCards = AUXILIARY_CARDS.filter((c) => c.conn === problem.targetConn);
-    const wrongCards = AUXILIARY_CARDS.filter((c) => c.conn !== problem.targetConn);
-
-    const pickedCorrect = correctCards[Math.floor(Math.random() * correctCards.length)];
-    const shuffledWrongs = [...wrongCards].sort(() => 0.5 - Math.random()).slice(0, 3);
-    const hand = [pickedCorrect, ...shuffledWrongs].sort(() => 0.5 - Math.random());
-
-    const options: ChoiceOption[] = hand.map((card) => ({
-      text: card.name,
-      sub: `${card.conn}接続<br>${card.mean}`,
-      isCorrect: card.conn === problem.targetConn,
-      conn: card.conn,
-    }));
-
-    setCards(options);
+    setCards(buildVerbChoices(problem));
     setIsLocked(false);
   }, []);
 
@@ -168,12 +194,48 @@ export const App: React.FC = () => {
       </span>
     );
 
-    const choices: ChoiceOption[] = [
-      { text: kakari.correct.text, sub: kakari.correct.sub, isCorrect: true },
-      ...kakari.wrongs.map((w) => ({ text: w.text, sub: w.sub, isCorrect: false })),
-    ].sort(() => 0.5 - Math.random());
+    setCards(buildKakariChoices(kakari));
+    setIsLocked(false);
+  }, []);
 
-    setCards(choices);
+  // Daily mode turn: serve the date-seeded queue in order (verb & kakari mixed)
+  const setupDailyTurn = useCallback((index: number) => {
+    const question = dailyQueueRef.current[index];
+    if (!question) return;
+    const total = dailyQueueRef.current.length;
+    const progressLabel = `【日課祓い 第 ${index + 1} 問 / 全 ${total} 問】`;
+
+    if (question.kind === 'kakari') {
+      isFeverRef.current = true;
+      setIsFever(true);
+      sound.playSpecial();
+
+      const kakari = question.problem;
+      currentKakariRef.current = kakari;
+      currentProblemRef.current = null;
+
+      setGuideText(`${progressLabel} 係り結びの結びを選べ`);
+      setTargetWord(`【${kakari.particle}】`);
+      setTargetForm('結びの形を選べ');
+      setMessageLog(
+        <span className="log-fever">
+          係助詞「{kakari.particle}」発動！結びは連体形か已然形か？
+        </span>
+      );
+      setCards(buildKakariChoices(kakari));
+    } else {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+
+      const problem = question.problem;
+      currentProblemRef.current = problem;
+
+      setGuideText(`${progressLabel} 次の動詞に接続する助動詞を選べ`);
+      setTargetWord(problem.word);
+      setTargetForm(problem.form);
+      setCards(buildVerbChoices(problem));
+    }
     setIsLocked(false);
   }, []);
 
@@ -248,6 +310,10 @@ export const App: React.FC = () => {
         earnedExp = finalWave * 45 + maxCombo * 8;
       } else if (gameMode === 'timeattack') {
         earnedExp = Math.round(finalScore * 0.45) + maxCombo * 6;
+      } else if (gameMode === 'daily') {
+        earnedExp = 80 + maxCombo * 5;
+      } else if (gameMode === 'suddendeath') {
+        earnedExp = finalScore * 12 + maxCombo * 4;
       }
 
       setExpGained(earnedExp);
@@ -259,6 +325,11 @@ export const App: React.FC = () => {
         const nextStoryClears = win && gameMode === 'story' ? prev.storyClears + 1 : prev.storyClears;
         const nextEndlessHigh = gameMode === 'endless' ? Math.max(prev.endlessHighWave, finalWave) : prev.endlessHighWave;
         const nextTimeHigh = gameMode === 'timeattack' ? Math.max(prev.timeAttackHighScore, finalScore) : prev.timeAttackHighScore;
+        const nextSuddenBest = gameMode === 'suddendeath' ? Math.max(prev.suddenDeathBest, finalScore) : prev.suddenDeathBest;
+        const dailyCompletion =
+          gameMode === 'daily' && win
+            ? applyDailyCompletion(prev, getDateKey(), getYesterdayKey())
+            : null;
 
         const updated: PlayerProfile = {
           ...prev,
@@ -266,6 +337,13 @@ export const App: React.FC = () => {
           storyClears: nextStoryClears,
           endlessHighWave: nextEndlessHigh,
           timeAttackHighScore: nextTimeHigh,
+          suddenDeathBest: nextSuddenBest,
+          ...(dailyCompletion
+            ? {
+                dailyLastDate: dailyCompletion.dailyLastDate,
+                dailyStreak: dailyCompletion.dailyStreak,
+              }
+            : {}),
         };
 
         const unlocked = checkNewTitles(updated, {
@@ -311,6 +389,34 @@ export const App: React.FC = () => {
       if (isReviewDrill) {
         reviewDrillIndex.current++;
         setupReviewDrillTurn();
+        return;
+      }
+
+      if (gameMode === 'daily') {
+        // 日課はHPの勝敗ではなく、全5問を終えたら完了。次の問題へ進める
+        const nextIdx = dailyIndexRef.current + 1;
+        dailyIndexRef.current = nextIdx;
+        if (nextIdx >= dailyQueueRef.current.length) {
+          sound.playFanfare();
+          finishBattleRun(true);
+        } else {
+          setupDailyTurn(nextIdx);
+        }
+        return;
+      }
+
+      if (gameMode === 'suddendeath') {
+        // 誤答したターンはプレイヤーHPが減った状態で届く。それを検知して即終了する
+        if (nextPlayerHp < playerHp) {
+          sound.playDamage();
+          finishBattleRun(false, streakRef.current, 0);
+          return;
+        }
+        if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever) {
+          triggerKakariMusubi();
+        } else {
+          setupNormalTurn();
+        }
         return;
       }
 
@@ -380,7 +486,9 @@ export const App: React.FC = () => {
       finishBattleRun,
       gameMode,
       isReviewDrill,
+      playerHp,
       score,
+      setupDailyTurn,
       setupNormalTurn,
       setupReviewDrillTurn,
       triggerKakariMusubi,
@@ -393,6 +501,7 @@ export const App: React.FC = () => {
     sound.startBgm();
     sound.playBell();
 
+    const modeDef = getModeDefinition(mode);
     setGameMode(mode);
     setCombo(0);
     setMaxCombo(0);
@@ -415,7 +524,24 @@ export const App: React.FC = () => {
       setEnemyHp(enemy.hp);
       setPlayerHp(100);
     } else if (mode === 'timeattack') {
-      setTimeRemaining(60);
+      setTimeRemaining(modeDef.rules.timerSeconds ?? 60);
+      setScore(0);
+      setCurrentStage(STAGES[0]);
+      setEnemyMaxHp(9999);
+      setEnemyHp(9999);
+      setPlayerHp(100);
+    } else if (mode === 'daily') {
+      // 日付シードでその日の出題セットと相手を決定（同日中は再挑戦しても同じ内容）
+      const todayKey = getDateKey();
+      dailyQueueRef.current = generateDailyQuestions(todayKey);
+      dailyIndexRef.current = 0;
+      setCurrentStage(STAGES[pickDailyStageIndex(todayKey)]);
+      // 敵HPは表示専用。全5問ぶんのダメージを受け切れる値にする
+      setEnemyMaxHp(300);
+      setEnemyHp(300);
+      setPlayerHp(100);
+    } else if (mode === 'suddendeath') {
+      streakRef.current = 0;
       setScore(0);
       setCurrentStage(STAGES[0]);
       setEnemyMaxHp(9999);
@@ -425,7 +551,11 @@ export const App: React.FC = () => {
 
     setMessageLog('言霊を繰り出せ！');
     setScreen('battle');
-    setupNormalTurn();
+    if (mode === 'daily') {
+      setupDailyTurn(0);
+    } else {
+      setupNormalTurn();
+    }
   };
 
   const startReviewDrill = () => {
@@ -478,6 +608,10 @@ export const App: React.FC = () => {
           const pts = 65;
           setScore((s) => s + pts);
           addDamagePopup(`+${pts}点 係り結び！`, true);
+        } else if (gameMode === 'suddendeath') {
+          streakRef.current += 1;
+          setScore(streakRef.current);
+          addDamagePopup(`${streakRef.current} 連続正解！`, true);
         } else {
           addDamagePopup(`-${dmg} 係り結び一閃！`, true);
         }
@@ -503,7 +637,8 @@ export const App: React.FC = () => {
       } else {
         sound.playDamage();
         const recoil = 15;
-        const nextPlayerHp = Math.max(0, playerHp - recoil);
+        // 日課は全問やり切る形式のため、気力が尽きて中断しないよう下限を設ける
+        const nextPlayerHp = Math.max(gameMode === 'daily' ? 1 : 0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
         addDamagePopup(`-${recoil} 結び不備`, false, true);
 
@@ -571,6 +706,10 @@ export const App: React.FC = () => {
           const pts = 15 + nextCombo * 4;
           setScore((s) => s + pts);
           addDamagePopup(`+${pts}点`, nextCombo >= 3);
+        } else if (gameMode === 'suddendeath') {
+          streakRef.current += 1;
+          setScore(streakRef.current);
+          addDamagePopup(`${streakRef.current} 連続！`, nextCombo >= 3);
         } else {
           addDamagePopup(`-${damage}`, nextCombo >= 3);
         }
@@ -597,7 +736,8 @@ export const App: React.FC = () => {
         sound.playDamage();
         setCombo(0);
         const recoil = 20;
-        const nextPlayerHp = Math.max(0, playerHp - recoil);
+        // 日課は全問やり切る形式のため、気力が尽きて中断しないよう下限を設ける
+        const nextPlayerHp = Math.max(gameMode === 'daily' ? 1 : 0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
         addDamagePopup(`-${recoil} 接続不備`, false, true);
 

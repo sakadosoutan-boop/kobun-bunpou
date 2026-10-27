@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameMode, PlayerProfile } from '../types';
 import { getPlayerRank } from '../data';
+import { MODE_REGISTRY } from '../modes/registry';
 
 interface TitleScreenProps {
   profile: PlayerProfile;
@@ -56,48 +57,27 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </p>
       </div>
 
-      {/* Mode Selection Grid */}
+      {/* Mode Selection Grid (モード定義レジストリから描画) */}
       <div className="mode-selection-container">
         <div className="mode-select-label">陣立てを選択して出陣せよ</div>
 
-        <button
-          className="mode-btn mode-story"
-          onClick={() => onStartMode('story')}
-        >
-          <div className="mode-icon">⛩️</div>
-          <div className="mode-info">
-            <span className="mode-name">本編討伐（全三幕）</span>
-            <span className="mode-sub">白狐・烏天狗・藤原怨霊の三体を退ける正統の陣</span>
-          </div>
-        </button>
-
-        <button
-          className="mode-btn mode-endless"
-          onClick={() => onStartMode('endless')}
-        >
-          <div className="mode-icon">🌙</div>
-          <div className="mode-info">
-            <span className="mode-name">百鬼夜行（無限サバイバル）</span>
-            <span className="mode-sub">倒すほどに強まる妖魔。何体まで祓えるか限界に挑む</span>
-          </div>
-          {profile.endlessHighWave > 0 && (
-            <span className="mode-badge">最高: {profile.endlessHighWave}体</span>
-          )}
-        </button>
-
-        <button
-          className="mode-btn mode-timeattack"
-          onClick={() => onStartMode('timeattack')}
-        >
-          <div className="mode-icon">⏳</div>
-          <div className="mode-info">
-            <span className="mode-name">六十秒一閃（タイムアタック）</span>
-            <span className="mode-sub">制限時間60秒！神速の判断で最高得点を目指せ</span>
-          </div>
-          {profile.timeAttackHighScore > 0 && (
-            <span className="mode-badge">最高: {profile.timeAttackHighScore}点</span>
-          )}
-        </button>
+        {MODE_REGISTRY.map((mode) => {
+          const badge = mode.getBadge ? mode.getBadge(profile) : null;
+          return (
+            <button
+              key={mode.id}
+              className={`mode-btn ${mode.buttonClass}`}
+              onClick={() => onStartMode(mode.id)}
+            >
+              <div className="mode-icon">{mode.icon}</div>
+              <div className="mode-info">
+                <span className="mode-name">{mode.label}</span>
+                <span className="mode-sub">{mode.description}</span>
+              </div>
+              {badge && <span className="mode-badge">{badge}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* Bottom Sub Actions */}
