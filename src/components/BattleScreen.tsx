@@ -78,6 +78,12 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
               </span>
               <span className="score-badge">得点: <b>{score}</b></span>
             </div>
+          ) : gameMode === 'suddendeath' ? (
+            <div className="time-attack-status">
+              <span className="score-badge">⚔️ 連続正解: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'daily' ? (
+            <span id="stage-label">📿 日課祓い</span>
           ) : gameMode === 'endless' ? (
             <span id="stage-label">🌙 百鬼夜行：第{wave}体目</span>
           ) : (
@@ -133,7 +139,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           {stage.name}
         </div>
 
-        {gameMode !== 'timeattack' && (
+        {gameMode !== 'timeattack' && gameMode !== 'suddendeath' && (
           <div className="hp-container">
             <div
               id="enemy-hp-bar"

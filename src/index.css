@@ -263,6 +263,16 @@ h1.main-title {
   background: linear-gradient(135deg, rgba(48, 36, 16, 0.95) 0%, rgba(20, 18, 14, 0.95) 100%);
 }
 
+.mode-daily {
+  border-color: rgba(45, 212, 191, 0.6);
+  background: linear-gradient(135deg, rgba(13, 42, 40, 0.95) 0%, rgba(10, 20, 22, 0.95) 100%);
+}
+
+.mode-suddendeath {
+  border-color: rgba(248, 113, 113, 0.65);
+  background: linear-gradient(135deg, rgba(52, 16, 20, 0.95) 0%, rgba(22, 10, 14, 0.95) 100%);
+}
+
 /* タイトル下部アクション */
 .title-actions {
   display: flex;

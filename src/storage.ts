@@ -11,6 +11,9 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   totalCorrect: 0,
   cardMastery: {},
   unlockedTitles: ['言霊の志士'],
+  dailyLastDate: '',
+  dailyStreak: 0,
+  suddenDeathBest: 0,
 };
 
 export function loadPlayerProfile(): PlayerProfile {
