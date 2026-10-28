@@ -28,6 +28,7 @@ export function getExamStatus(profile: PlayerProfile): {
 
 export const examMode: ModeDefinition = {
   id: 'exam',
+  section: 'special',
   name: '昇進試験',
   label: '昇進試験（位階への挑戦）',
   description: '混合10問・ミス2回まで。合格すれば次の位階へ昇進。不合格でも修練は減らない',

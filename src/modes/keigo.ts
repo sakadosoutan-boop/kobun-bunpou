@@ -28,9 +28,10 @@ export function keigoDirectionLabel(direction: KeigoDirection): string {
 
 export const keigoMode: ModeDefinition = {
   id: 'keigo',
+  section: 'field',
   name: '敬語の陣',
   label: '敬語の陣（敬語モード）',
-  description: '古典の実文を見て、敬語が「誰を・誰に対して」高めるのか、敬意の方向を見極める',
+  description: '含まれる内容：敬語の方向（尊敬／謙譲／丁寧／二重敬語）を見極める問題。全20問',
   icon: '👑',
   buttonClass: 'mode-keigo',
   rules: {

@@ -1,6 +1,6 @@
 import { ModeDefinition } from './types';
 import { PlayerProfile, ReviewQueueItem } from '../types';
-import { CONJUGATION_PROBLEMS, KAKARI_PROBLEMS, KEIGO_PROBLEMS, MEANING_PROBLEMS, READING_PROBLEMS, VERB_PROBLEMS } from '../data';
+import { CONJUGATION_PROBLEMS, KAKARI_PROBLEMS, KEIGO_PROBLEMS, MEANING_PROBLEMS, PARTICLE_PROBLEMS, READING_PROBLEMS, VERB_PROBLEMS, WORD_PROBLEMS } from '../data';
 import { SessionQuestion, shuffledCopy } from './session';
 import { getDateKey } from './daily';
 
@@ -102,6 +102,14 @@ export function resolveReviewQuestion(key: string): SessionQuestion | null {
       const problem = KEIGO_PROBLEMS.find((p) => p.id === a);
       return problem ? { kind: 'keigo', problem } : null;
     }
+    case 'word': {
+      const problem = WORD_PROBLEMS.find((p) => p.id === a);
+      return problem ? { kind: 'word', problem } : null;
+    }
+    case 'particle': {
+      const problem = PARTICLE_PROBLEMS.find((p) => p.id === a);
+      return problem ? { kind: 'particle', problem } : null;
+    }
     default:
       return null;
   }
@@ -149,6 +157,7 @@ export function buildReviewSession(
 
 export const reviewMode: ModeDefinition = {
   id: 'review',
+  section: 'special',
   name: '怨念回収戦',
   label: '怨念回収戦（苦手復習）',
   description: '間違えた問題が間隔を空けて蘇る。繰り返し祓って苦手を卒業させよ',

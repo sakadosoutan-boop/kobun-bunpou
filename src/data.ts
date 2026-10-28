@@ -1,4 +1,4 @@
-import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile, MeaningProblem, ReadingProblem, ConjugationProblem, KeigoProblem } from './types';
+import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile, MeaningProblem, ReadingProblem, ConjugationProblem, KeigoProblem, WordProblem, ParticleProblem } from './types';
 import kitsuneImg from './assets/images/yokai_white_kitsune_1792736500578.jpg';
 import tenguImg from './assets/images/yokai_crow_tengu_1792736501436.jpg';
 import lordImg from './assets/images/yokai_phantom_lord_1792736501784.jpg';
@@ -287,7 +287,9 @@ export const STAGES: Stage[] = [
     image: kitsuneImg,
     hp: 140,
     label: "第一幕：妖狐の社",
-    desc: "千年の修業を経て人の言葉を惑わす妖狐。未然形の言霊で祓え。"
+    desc: "千年の修業を経て人の言葉を惑わす妖狐。未然形の言霊で祓え。",
+    weakness: "verb",
+    weaknessLabel: "助動詞の接続"
   },
   {
     name: "迷妄の烏天狗",
@@ -295,7 +297,9 @@ export const STAGES: Stage[] = [
     image: tenguImg,
     hp: 210,
     label: "第二幕：深山の嵐",
-    desc: "山林の嵐を操る漆黒の烏天狗。連用形の言霊で翼を折れ。"
+    desc: "山林の嵐を操る漆黒の烏天狗。連用形の言霊で翼を折れ。",
+    weakness: "kakari",
+    weaknessLabel: "係り結び"
   },
   {
     name: "文法怨霊・藤原の大君",
@@ -303,19 +307,28 @@ export const STAGES: Stage[] = [
     image: lordImg,
     hp: 300,
     label: "大詰：怨霊の玉座",
-    desc: "かつて宮廷歌壇を統べた大君の怨霊。係り結びと終止形の秘術を撃ち破れ。"
+    desc: "かつて宮廷歌壇を統べた大君の怨霊。係り結びと終止形の秘術を撃ち破れ。",
+    weakness: "keigo",
+    weaknessLabel: "敬語"
   }
 ];
 
 // Endless Mode dynamic Yokai generator
 export function generateEndlessStage(wave: number): Stage {
-  const baseYokai = [
-    { name: "惑わしの白狐", emoji: "🦊", img: kitsuneImg, labelBase: "妖狐" },
-    { name: "宵闇の九尾狐", emoji: "🦊", img: kitsuneImg, labelBase: "妖狐" },
-    { name: "迷妄の烏天狗", emoji: "👺", img: tenguImg, labelBase: "天狗" },
-    { name: "疾風の鞍馬天狗", emoji: "👺", img: tenguImg, labelBase: "天狗" },
-    { name: "文法怨霊・藤原の大君", emoji: "👻", img: lordImg, labelBase: "怨霊" },
-    { name: "常世の紫式部怨霊", emoji: "👻", img: lordImg, labelBase: "怨霊" },
+  const baseYokai: {
+    name: string;
+    emoji: string;
+    img: string;
+    labelBase: string;
+    weakness: Stage['weakness'];
+    weaknessLabel: string;
+  }[] = [
+    { name: "惑わしの白狐", emoji: "🦊", img: kitsuneImg, labelBase: "妖狐", weakness: "verb", weaknessLabel: "助動詞の接続" },
+    { name: "宵闇の九尾狐", emoji: "🦊", img: kitsuneImg, labelBase: "妖狐", weakness: "verb", weaknessLabel: "助動詞の接続" },
+    { name: "迷妄の烏天狗", emoji: "👺", img: tenguImg, labelBase: "天狗", weakness: "kakari", weaknessLabel: "係り結び" },
+    { name: "疾風の鞍馬天狗", emoji: "👺", img: tenguImg, labelBase: "天狗", weakness: "kakari", weaknessLabel: "係り結び" },
+    { name: "文法怨霊・藤原の大君", emoji: "👻", img: lordImg, labelBase: "怨霊", weakness: "keigo", weaknessLabel: "敬語" },
+    { name: "常世の紫式部怨霊", emoji: "👻", img: lordImg, labelBase: "怨霊", weakness: "keigo", weaknessLabel: "敬語" },
   ];
 
   const pick = baseYokai[(wave - 1) % baseYokai.length];
@@ -327,7 +340,9 @@ export function generateEndlessStage(wave: number): Stage {
     image: pick.img,
     hp,
     label: `百鬼夜行：第 ${wave} 体目`,
-    desc: `百鬼夜行を彷徨う${pick.labelBase}。討伐を重ねて言霊の限界を超えよ。`
+    desc: `百鬼夜行を彷徨う${pick.labelBase}。討伐を重ねて言霊の限界を超えよ。`,
+    weakness: pick.weakness,
+    weaknessLabel: pick.weaknessLabel
   };
 }
 
@@ -372,7 +387,7 @@ export const ALL_TITLES: { id: string; name: string; condition: string }[] = [
   { id: "combo_master", name: "十連撃の太刀", condition: "10連続正解を達成" },
   { id: "kakari_expert", name: "係り結びの達人", condition: "係り結び一閃を3回以上成功" },
   { id: "hyakki_hero", name: "百鬼夜行の覇者", condition: "百鬼夜行モードで第5体目以上を撃破" },
-  { id: "speed_god", name: "六十秒の神速", condition: "タイムアタックで得点400以上を獲得" },
+  { id: "speed_god", name: "六十秒の神速", condition: "一閃（60秒）で25問以上正解" },
   { id: "flawless", name: "無傷の快挙", condition: "一度も誤答せずに本編をクリア" },
   { id: "card_scholar", name: "助動詞の求道者", condition: "札図鑑の習熟度合計が30以上に到達" }
 ];
@@ -393,7 +408,7 @@ export function checkNewTitles(profile: PlayerProfile, lastResult?: { win: boole
   if (profile.storyClears >= 1 || (lastResult?.mode === 'story' && (lastResult?.wave || 0) >= 2)) grant("天狗破り");
   if ((lastResult?.combo || 0) >= 10) grant("十連撃の太刀");
   if (profile.endlessHighWave >= 5) grant("百鬼夜行の覇者");
-  if (profile.timeAttackHighScore >= 400) grant("六十秒の神速");
+  if (profile.timeAttackHighScore >= 25) grant("六十秒の神速");
   if (lastResult?.win && lastResult?.mistakes === 0) grant("無傷の快挙");
 
   const totalMastery = Object.values(profile.cardMastery || {}).reduce((a, b) => a + b, 0);
@@ -611,9 +626,9 @@ export const MEANING_PROBLEMS: MeaningProblem[] = [
   },
   {
     id: "m10",
-    sentence: "汝、明日までにこの文を持て来るべし。",
+    sentence: "汝、明日までにこの門を守るべし。",
     auxiliary: "べし",
-    targetText: "来るべし",
+    targetText: "守るべし",
     correct: "命令（〜せよ）",
     wrongs: ["推量（〜だろう）", "適当（〜するのがよい）", "打消推量（〜ないだろう）"],
     explanation: "目下の者への指示の文脈なので、「べし」は命令。「持って来なさい」。",
@@ -631,20 +646,20 @@ export const MEANING_PROBLEMS: MeaningProblem[] = [
   {
     id: "m12",
     sentence: "猫に、大事の魚を取らる。",
-    auxiliary: "らる",
+    auxiliary: "る",
     targetText: "取らる",
     correct: "受身（〜れる）",
     wrongs: ["尊敬（〜なさる）", "自発（自然と〜される）", "可能（〜できる）"],
-    explanation: "「猫に」という動作主が示され、被害を受ける話なので「らる」は受身。「猫に魚を取られた」。",
+    explanation: "「猫に」という動作主が示され、被害を受ける話なので受身。四段動詞「取る」の未然形「取ら」に付く助動詞は「らる」ではなく「る」で、「取ら＋る＝取らる」となります。「猫に魚を取られた」。",
   },
   {
     id: "m13",
-    sentence: "帝は、その歌を御覧ぜらる。",
+    sentence: "帝は、臣下の働きを褒めらる。",
     auxiliary: "らる",
-    targetText: "御覧ぜらる",
+    targetText: "褒めらる",
     correct: "尊敬（〜なさる）",
     wrongs: ["受身（〜れる）", "自発（自然と〜される）", "使役（〜なさる）"],
-    explanation: "主語が帝という高貴な方なので、「らる」は尊敬。「帝はその歌を御覧になる」。",
+    explanation: "主語が帝という高貴な方なので、「らる」は尊敬。下二段動詞「褒む」の未然形「褒め」に「らる」が付いた形で、「帝は臣下の働きをお褒めになる」。",
   },
   {
     id: "m14",
@@ -677,21 +692,21 @@ export const MEANING_PROBLEMS: MeaningProblem[] = [
   {
     id: "m17",
     sentence: "院は、歌を詠ませ給ふ。",
-    auxiliary: "さす",
+    auxiliary: "す",
     targetText: "詠ませ",
     correct: "尊敬（〜なさる）",
     wrongs: ["使役（〜せる）", "受身（〜れる）", "可能（〜できる）"],
-    explanation: "「さす」に尊敬の「給ふ」が続く形は、そのまま主語への尊敬を表します。「院は歌をお詠みになる」。",
+    explanation: "四段動詞「詠む」に付くのは「さす」ではなく「す」で、その連用形「せ」に尊敬の「給ふ」が続くと、全体で主語への尊敬を表します。「院は歌をお詠みになる」。",
   },
   // ── なり（伝聞・推定） ──
   {
     id: "m18",
-    sentence: "あの山に、名のある滝ありなり。",
+    sentence: "あの山に、名のある滝あるなり。",
     auxiliary: "なり",
-    targetText: "ありなり",
+    targetText: "あるなり",
     correct: "伝聞（〜だそうだ）",
     wrongs: ["推定（〜のようだ）", "断定（〜である）", "打消（〜でない）"],
-    explanation: "人から聞いた情報を述べているので、伝聞・推定の「なり」は伝聞。「滝があるそうだ」。",
+    explanation: "人から聞いた情報を述べているので、伝聞・推定の「なり」は伝聞。「滝があるそうだ」。なお「なり」は終止形接続ですが、ラ変の動詞には連体形に付くので、「あり」ではなく連体形「ある」に付いた「あるなり」が正しい形です。",
   },
   {
     id: "m19",
@@ -705,12 +720,12 @@ export const MEANING_PROBLEMS: MeaningProblem[] = [
   // ── まじ ──
   {
     id: "m20",
-    sentence: "この雪にては、峠は越えまじ。",
+    sentence: "この雪にては、峠は越ゆまじ。",
     auxiliary: "まじ",
-    targetText: "越えまじ",
+    targetText: "越ゆまじ",
     correct: "打消推量（〜ないだろう）",
     wrongs: ["禁止（〜してはならない）", "打消意志（〜しないつもりだ）", "不可能（〜できない）"],
-    explanation: "天候という意志の及ばない事柄の見通しなので、「まじ」は打消推量。「峠は越えられないだろう」。",
+    explanation: "天候という意志の及ばない事柄の見通しなので、「まじ」は打消推量。「この雪では峠を越えることはないだろう」。なお「まじ」は終止形接続なので、下二段「越ゆ」の終止形「越ゆ」に付きます（「越え」は未然・連用形）。",
   },
   {
     id: "m21",
@@ -806,7 +821,7 @@ export const READING_PROBLEMS: ReadingProblem[] = [
     target: "さらなり",
     correct: "断定（〜である）",
     wrongs: ["伝聞（〜だそうだ）", "推定（〜のようだ）", "打消（〜でない）"],
-    explanation: "「さらなり」の「なり」は断定の助動詞で、体言（副詞「さら」）に接続しています。伝聞・推定の「なり」は動詞の終止形に接続するので、接続から見分けられます。",
+    explanation: "「さらなり」は副詞「さら」に断定の助動詞「なり」が付いた形で、「言うまでもない」という意味です。伝聞・推定の「なり」は動詞の終止形（ラ変型の活用語には連体形）に接続するので、接続のしかたから見分けられます。",
   },
   {
     id: "r04",
@@ -872,7 +887,7 @@ export const READING_PROBLEMS: ReadingProblem[] = [
     target: "久しからず",
     correct: "未然形",
     wrongs: ["連用形", "終止形", "連体形"],
-    explanation: "打消の助動詞「ず」は未然形接続。「久し」の未然形「久しから」に接続しています（「ず」の補助活用は形容詞の未然形に準じます）。",
+    explanation: "打消の助動詞「ず」は未然形接続。「久し」の未然形「久しから」に接続しています（形容詞が助動詞に続くときは、この「〜から」の形の未然形を用います）。",
   },
   {
     id: "r10",
@@ -905,7 +920,7 @@ export const READING_PROBLEMS: ReadingProblem[] = [
     target: "見るものかは",
     correct: "連体形",
     wrongs: ["已然形", "終止形", "未然形"],
-    explanation: "疑問・反語の係助詞「か」の結びは連体形。ここでは体言「もの」が結びの役割を果たしています。「こそ」だけが已然形で結ぶ点と区別しましょう。",
+    explanation: "疑問・反語の係助詞「か」の結びは連体形。ここでは「見る」が連体形で体言「もの」にかかり、これが結びになっています。「こそ」だけが已然形で結ぶ点と区別しましょう。",
   },
 ];
 
@@ -1018,7 +1033,7 @@ export const KEIGO_PROBLEMS: KeigoProblem[] = [
   // ── 尊敬（動作主を高める） ──
   {
     id: "k01",
-    source: "枕草子",
+    source: "枕草子（例文）",
     sentence: "中宮、簾の内より「香炉峰の雪は、いかならむ」とのたまふ。",
     expression: "のたまふ",
     relation: "語り手（清少納言）→ 中宮",
@@ -1165,7 +1180,7 @@ export const KEIGO_PROBLEMS: KeigoProblem[] = [
   // ── 二重敬語（最高位への最大の敬意） ──
   {
     id: "k17",
-    source: "源氏物語",
+    source: "源氏物語（例文）",
     sentence: "帝、このことを聞こし召す。",
     expression: "聞こし召す",
     relation: "語り手 → 帝",
@@ -1198,5 +1213,517 @@ export const KEIGO_PROBLEMS: KeigoProblem[] = [
     relation: "語り手 → 帝",
     direction: "nijuu",
     explanation: "「聞こしめす」は尊敬語「聞こす」に尊敬の「めす」が重なった二重敬語で、「聞こし召す」と同じく帝への最大の敬意です。",
+  },
+];
+
+// ============================================================
+// 古文単語問題（単語の陣）
+// 高校古文の基本単語30語。多義語は短い文脈文で意味を1つに特定する。
+// 現代語と意味がずれる語（あたらし・おどろく・なつかし・ありがたし等）は
+// 現代語の意味をあえて誤答に入れ、文脈で判定が割れないようにした。
+// ============================================================
+export const WORD_PROBLEMS: WordProblem[] = [
+  {
+    id: "w01",
+    word: "あらまほし",
+    sentence: "かかる人の心ばへこそ、あらまほしけれ。",
+    targetText: "あらまほしけれ",
+    correct: "理想的だ（望ましい）",
+    wrongs: ["思いがけない", "情けない", "頼りない"],
+    explanation: "「あらまほし」は「かくありたい」と思う様子で、理想的・望ましいという意味。係助詞「こそ」を受けて已然形「あらまほしけれ」で結んでいます。",
+  },
+  {
+    id: "w02",
+    word: "いみじ",
+    sentence: "名人の笛の音、いみじかりけり。人々皆聞き惚れたり。",
+    targetText: "いみじかり",
+    correct: "すばらしい",
+    wrongs: ["つまらない", "悲しい", "恥ずかしい"],
+    explanation: "「いみじ」は程度がはなはだしい意で、良いことにも悪いことにも使いますが、ここでは人々が聞き惚れているので「すばらしい」の意。「いみじかり」は「いみじくあり」の音便的な形です。",
+  },
+  {
+    id: "w03",
+    word: "あたらし",
+    sentence: "あたら桜の花を、春風の散らすかな。",
+    targetText: "あたら",
+    correct: "もったいない（惜しい）",
+    wrongs: ["新しい", "鮮やかな", "香りの高い"],
+    explanation: "古文の「あたらし」は「もったいない・惜しい」の意。現代語の「新しい」は古文では「あらたし」と言い、「あたらし」とは別語です。",
+  },
+  {
+    id: "w04",
+    word: "おどろく",
+    sentence: "鶏の声におどろきて、目覚めぬ。",
+    targetText: "おどろき",
+    correct: "はっと目が覚める",
+    wrongs: ["驚いて飛びのく", "怯えて震える", "慌てて走り出す"],
+    explanation: "古文の「おどろく」は眠りから目覚める意が中心で、この文でも直後の「目覚めぬ」と重なって眠りから覚めたことを表します。現代語の「驚く」とは意味がずれます。",
+  },
+  {
+    id: "w05",
+    word: "あくがる",
+    sentence: "長き旅路に、心あくがれて、ただ物思ふ。",
+    targetText: "あくがれて",
+    correct: "心がさまよって、ぼんやりする",
+    wrongs: ["すっかり飽きてしまう", "ひどく怒る", "落ち着きを取り戻す"],
+    explanation: "「あくがる」は心が体から離れてさまよう意で、うわの空・ぼんやりした様子を表します。「飽く（あく）」とは別語です。",
+  },
+  {
+    id: "w06",
+    word: "ゆかし",
+    sentence: "隣にて琴の音す。ゆかしくて、近寄りて聞く。",
+    targetText: "ゆかしく",
+    correct: "心が引かれて（聞きたい）",
+    wrongs: ["懐かしくて", "恐ろしくて", "涼しくて"],
+    explanation: "「ゆかし」は見たい・聞きたい・知りたいと心が引かれる意。琴の音に引かれて近寄って聞く、という流れから決まります。",
+  },
+  {
+    id: "w07",
+    word: "あさまし",
+    sentence: "助けられし恩人を売る。その心、あさまし。",
+    targetText: "あさまし",
+    correct: "あきれるほど情けない",
+    wrongs: ["立派で感心する", "水が浅い", "激しく悲しむ"],
+    explanation: "「あさまし」は驚きあきれるほどひどい・情けないという意。恩人を裏切る行為への評価なので、この意味になります。「浅し」とは別です。",
+  },
+  {
+    id: "w08",
+    word: "つれなし",
+    sentence: "頼みし人に、つれなき返事して、帰しつ。",
+    targetText: "つれなき",
+    correct: "冷淡な・素っ気ない",
+    wrongs: ["連れのいない", "退屈な", "忙しそうな"],
+    explanation: "「つれなし」は冷淡で素っ気ない意。頼みに来た人を素っ気ない返事で帰した、という文脈から決まります。「連れ」とは関係ありません。",
+  },
+  {
+    id: "w09",
+    word: "なつかし",
+    sentence: "老人の昔語りする声、なつかしく聞こゆ。",
+    targetText: "なつかしく",
+    correct: "心引かれて慕わしい",
+    wrongs: ["昔が懐かしい", "暑苦しい", "恥ずかしい"],
+    explanation: "古文の「なつかし」は、対象に心が引かれて慕わしい・親しみ深いという意。現代語の「（昔が）懐かしい」とは意味がずれます。",
+  },
+  {
+    id: "w10",
+    word: "わりなし",
+    sentence: "幼き子を一人残して行くこと、わりなし。",
+    targetText: "わりなし",
+    correct: "どうしようもなくつらい",
+    wrongs: ["割合が決まらない", "理由が全くない", "分け隔てがない"],
+    explanation: "「わりなし」は理屈では割り切れないほどどうにもならない・つらいという意。幼い子を残していく辛さに使われています。",
+  },
+  {
+    id: "w11",
+    word: "あいなし",
+    sentence: "語り手の長き話、あいなくて、人々席を立ちぬ。",
+    targetText: "あいなく",
+    correct: "つまらなくて",
+    wrongs: ["愛情がなくて", "相手がいなくて", "悲しくて"],
+    explanation: "「あいなし」は味気ない・つまらない・気にくわないという意。話がつまらなくて人々が席を立った、という流れから決まります。",
+  },
+  {
+    id: "w12",
+    word: "心もとなし",
+    sentence: "旅に発ちし人より便りなく、心もとなし。",
+    targetText: "心もとなし",
+    correct: "不安で心配だ",
+    wrongs: ["心がこもっていない", "もったいない", "頼もしく心強い"],
+    explanation: "「心もとなし」は先が見えず不安で心配な気持ちを表します。旅に出た人から便りがない状況に使われています。",
+  },
+  {
+    id: "w13",
+    word: "かたはらいたし",
+    sentence: "転びし人を笑ふ人々を見て、かたはらいたし。",
+    targetText: "かたはらいたし",
+    correct: "見ていて痛々しい（恥ずかしい）",
+    wrongs: ["傍らが物理的に痛い", "見ていてうらやましい", "見ていて面白い"],
+    explanation: "「かたはらいたし」は、傍らで見ているのが辛いほど痛々しい・恥ずかしいという意。転んだ人を笑う人々を見ての感想です。体が痛いわけではありません。",
+  },
+  {
+    id: "w14",
+    word: "まめやか",
+    sentence: "まめやかに主に仕へて、信頼を得たり。",
+    targetText: "まめやかに",
+    correct: "誠実に・まじめに",
+    wrongs: ["豆のように小さく", "派手やかに", "急いで"],
+    explanation: "「まめやか」は誠実でまじめな様子を表す形容動詞。主君にまじめに仕えて信頼を得た、という文脈です。「豆」とは関係ありません。",
+  },
+  {
+    id: "w15",
+    word: "あてなり",
+    sentence: "姫君の御姿、いとあてなり。",
+    targetText: "あてなり",
+    correct: "上品で優雅だ",
+    wrongs: ["あてがあって頼もしい", "派手で華やかだ", "幼く小さい"],
+    explanation: "「あてなり」は身分が高く上品で優雅な様子を表します。姫君の姿への評価として使われています。",
+  },
+  {
+    id: "w16",
+    word: "をかし",
+    sentence: "夏の夜、螢の飛び交ふ様、をかし。",
+    targetText: "をかし",
+    correct: "趣がある（面白い）",
+    wrongs: ["滑稽で笑える", "馬鹿げている", "恐ろしい"],
+    explanation: "「をかし」は明るい知的な趣・面白さを表し、枕草子で清少納言が愛用した評価の言葉です。現代語の「おかしい（滑稽・変だ）」とは意味がずれます。",
+  },
+  {
+    id: "w17",
+    word: "あはれ",
+    sentence: "秋の夕暮れ、雁の声あはれなり。",
+    targetText: "あはれなり",
+    correct: "しみじみと心にしみる趣がある",
+    wrongs: ["賑やかで楽しい", "滑稽で笑える", "まぶしく明るい"],
+    explanation: "「あはれ」はしみじみと心にしみる感動を表します。秋の夕暮れに雁の声を聞く場面の、静かな趣を表す言葉です。",
+  },
+  {
+    id: "w18",
+    word: "かなし",
+    sentence: "幼き子の笑む顔、いとかなし。",
+    targetText: "かなし",
+    correct: "いとしい（かわいい）",
+    wrongs: ["悲しい", "情けない", "恥ずかしい"],
+    explanation: "「かなし」には悲しいの他に「いとしい」という意味があり、幼い子の笑顔への愛情を表すこの文では「いとしい」の意です。",
+  },
+  {
+    id: "w19",
+    word: "うつくし",
+    sentence: "生まれし子の顔、うつくしく見ゆ。",
+    targetText: "うつくしく",
+    correct: "かわいらしい",
+    wrongs: ["美しい", "恐ろしい", "立派だ"],
+    explanation: "古文の「うつくし」は、小さいもの・幼いものへの愛情を込めた「かわいらしい」の意が中心です。生まれた子の顔への言葉なのでこの意味になります。",
+  },
+  {
+    id: "w20",
+    word: "めでたし",
+    sentence: "この歌の調べ、いとめでたし。",
+    targetText: "めでたし",
+    correct: "すばらしい",
+    wrongs: ["珍しい", "恐れ多い", "新しい"],
+    explanation: "「めでたし」は愛でたくなるほどすばらしい・立派だという意。歌の調べを褒める言葉です。",
+  },
+  {
+    id: "w21",
+    word: "ありがたし",
+    sentence: "かかる宝にめぐり会ふこと、ありがたし。",
+    targetText: "ありがたし",
+    correct: "めったにない（珍しい）",
+    wrongs: ["感謝せずにはいられない", "当然のことだ", "永遠に続く"],
+    explanation: "古文の「ありがたし」は「あることが難しい」から来た語で、めったにない・珍しいの意が中心です。現代語の「感謝する気持ち」とは意味がずれます。",
+  },
+  {
+    id: "w22",
+    word: "おぼつかなし",
+    sentence: "闇夜に、山路いとおぼつかなし。",
+    targetText: "おぼつかなし",
+    correct: "はっきりせず頼りない",
+    wrongs: ["恐ろしく激しい", "懐かしく慕わしい", "つまらなく退屈だ"],
+    explanation: "「おぼつかなし」は物事がはっきりせず、頼りなく不安な様子を表します。闇夜で山道が見分けにくい状況です。",
+  },
+  {
+    id: "w23",
+    word: "ねんごろなり",
+    sentence: "ねんごろに語らひて、やがて心許しぬ。",
+    targetText: "ねんごろに",
+    correct: "親しみを込めて（親密に）",
+    wrongs: ["年頃になって", "退屈そうに", "静かに"],
+    explanation: "「ねんごろなり」は丁寧・親密の意。ここでは親しく語り合って打ち解けたという流れなので「親密に」の意です。「年頃」とは関係ありません。",
+  },
+  {
+    id: "w24",
+    word: "はづかし",
+    sentence: "大宮人の前にて舞ふこと、はづかしく覚ゆ。",
+    targetText: "はづかしく",
+    correct: "気恥ずかしい",
+    wrongs: ["懐かしい", "忙しい", "美しい"],
+    explanation: "「はづかし」は人前に出ることに気後れする・恥ずかしいという意。高貴な人々の前で舞うことへの気恥ずかしさを表します。",
+  },
+  {
+    id: "w25",
+    word: "さやか",
+    sentence: "秋の月、さやかに澄みて照らす。",
+    targetText: "さやかに",
+    correct: "はっきりと明るく",
+    wrongs: ["涼しく爽やかに", "静かに", "速やかに"],
+    explanation: "「さやか」は明らかではっきりしている様子。澄んだ秋の月がはっきりと照らす様子です。現代語の「さわやか（涼しい）」とは意味がずれます。",
+  },
+  {
+    id: "w26",
+    word: "ゆゆし",
+    sentence: "出陣の前に、ゆゆしき言をな言ひそ。",
+    targetText: "ゆゆしき",
+    correct: "不吉な",
+    wrongs: ["立派な", "賑やかな", "急な"],
+    explanation: "「ゆゆし」は程度のはなはだしさを表し、ここでは不吉・縁起が悪い意。出陣前に「言うな（な〜そ）」と止められていることから決まります。",
+  },
+  {
+    id: "w27",
+    word: "かしこし",
+    sentence: "帝の御前に出でて、かしこく覚ゆ。",
+    targetText: "かしこく",
+    correct: "恐れ多い",
+    wrongs: ["賢く", "懐かしく", "忙しく"],
+    explanation: "古文の「かしこし」は恐ろしい・恐れ多いの意。帝の前に出る畏れの気持ちを表します。現代語の「賢い」とは意味がずれます。",
+  },
+  {
+    id: "w28",
+    word: "らうたし",
+    sentence: "幼君の御声、いとらうたし。",
+    targetText: "らうたし",
+    correct: "かわいらしい（いとしい）",
+    wrongs: ["乱暴だ", "うるさい", "悲しい"],
+    explanation: "「らうたし」は幼いものへの愛情を表す語で、かわいらしい・いとしいの意。幼い君主の声への言葉です。",
+  },
+  {
+    id: "w29",
+    word: "しのぶ",
+    sentence: "昔の人をしのびて、涙落つ。",
+    targetText: "しのびて",
+    correct: "思い出して慕って",
+    wrongs: ["我慢して", "身を隠して", "盗んで"],
+    explanation: "「しのぶ」には我慢する意もありますが、ここは「昔の人」を対象に涙を落としているので、思い出して慕う意の「しのぶ」です。",
+  },
+  {
+    id: "w30",
+    word: "あやし",
+    sentence: "あやしき小家に、一人住む翁ありけり。",
+    targetText: "あやしき",
+    correct: "粗末な",
+    wrongs: ["怪しく不審な", "美しく立派な", "広く新しい"],
+    explanation: "古文の「あやし」は身分が低い・粗末だという意が中心で、ここでは翁の住む小さな家を表します。現代語の「怪しい（不審だ）」とは意味がずれます。",
+  },
+];
+
+// ============================================================
+// 助詞問題（助詞の陣）
+// 実文中の助詞の働きを問う。格助詞・接続助詞・係助詞・終助詞・副助詞の
+// 5分類から各4問、計20問。結びの活用形や呼応で判定が1つに決まる例のみ。
+// ============================================================
+export const PARTICLE_PROBLEMS: ParticleProblem[] = [
+  // ── 格助詞（4問） ──
+  {
+    id: "p01",
+    source: "例文",
+    sentence: "翁が、山にて光る竹を見つけたり。",
+    particle: "が",
+    targetText: "翁が",
+    category: "格助詞",
+    correct: "主語を示す格助詞（主格）",
+    wrongs: ["逆接を示す接続助詞", "願望を表す終助詞", "体言を修飾する格助詞（連体修飾格）"],
+    explanation: "文の主語「翁」を示しているので、「が」は主格の格助詞です。「が」には逆接の接続助詞の用法もありますが、ここでは体言に付いて主語を作っています。",
+  },
+  {
+    id: "p02",
+    source: "例文",
+    sentence: "姫、月の光を見て、歌を詠む。",
+    particle: "を",
+    targetText: "歌を",
+    category: "格助詞",
+    correct: "動作の対象を示す格助詞（目的格）",
+    wrongs: ["主語を示す格助詞（主格）", "場所の通過を示す格助詞", "詠嘆を表す間投助詞"],
+    explanation: "「詠む」という動作の対象が「歌」であることを示す目的格の「を」です。「を」には通過する場所を示す用法もありますが、ここでは対象を示しています。",
+  },
+  {
+    id: "p03",
+    source: "平家物語（祇園精舎）",
+    sentence: "祇園精舎の鐘の声、諸行無常の響きあり。",
+    particle: "の",
+    targetText: "精舎の",
+    category: "格助詞",
+    correct: "体言を修飾する格助詞（連体修飾格）",
+    wrongs: ["主語を示す格助詞（主格）", "引用を示す格助詞", "理由を示す接続助詞"],
+    explanation: "「祇園精舎」が後ろの体言「鐘」を修飾しているので、「の」は連体修飾格の格助詞です。",
+  },
+  {
+    id: "p04",
+    source: "方丈記（冒頭）",
+    sentence: "淀みに浮かぶうたかたは、かつ消えかつ結びて、久しくとどまりたるためしなし。",
+    particle: "に",
+    targetText: "淀みに",
+    category: "格助詞",
+    correct: "存在する場所を示す格助詞",
+    wrongs: ["動作の時を示す格助詞", "動作の目的を示す格助詞", "比較の基準を示す格助詞"],
+    explanation: "泡が浮かんでいる場所が「淀み」であることを示す、場所の格助詞「に」です。「に」には時・目的・比較の基準などの用法もありますが、ここでは存在の場所です。",
+  },
+  // ── 接続助詞（4問） ──
+  {
+    id: "p05",
+    source: "例文",
+    sentence: "花咲けば、鳥鳴く。",
+    particle: "ば",
+    targetText: "咲けば",
+    category: "接続助詞",
+    correct: "順接の確定条件（〜ので・〜すると）",
+    wrongs: ["順接の仮定条件（〜たら）", "逆接の確定条件（〜けれども）", "単なる継起の接続（〜て）"],
+    explanation: "「ば」が已然形「咲け」に付いているので、すでに確定した条件としてつなぐ順接の確定条件です。未然形に付けば仮定条件になります。",
+  },
+  {
+    id: "p06",
+    source: "例文",
+    sentence: "雪降れど、旅人は出で立ちぬ。",
+    particle: "ど",
+    targetText: "降れど",
+    category: "接続助詞",
+    correct: "逆接の確定条件（〜けれども）",
+    wrongs: ["順接の確定条件（〜ので）", "順接の仮定条件（〜たら）", "逆接の仮定条件（〜ても）"],
+    explanation: "「ど」が已然形「降れ」に付いているので、確定した事実に対する逆接です。仮定の逆接は未然形に「ども」が付いた形になります。",
+  },
+  {
+    id: "p07",
+    source: "例文",
+    sentence: "翁、光る竹を取りて、家に帰りぬ。",
+    particle: "て",
+    targetText: "取りて",
+    category: "接続助詞",
+    correct: "動作の連続・継起を示す接続助詞（〜て）",
+    wrongs: ["逆接を示す接続助詞（〜けれども）", "理由を示す接続助詞（〜ので）", "並立を示す接続助詞（〜たり）"],
+    explanation: "竹を取る動作の後に家に帰る動作が続く、時間の順序に沿った継起の接続です。",
+  },
+  {
+    id: "p08",
+    source: "例文",
+    sentence: "月を眺めつつ、歌を詠む。",
+    particle: "つつ",
+    targetText: "眺めつつ",
+    category: "接続助詞",
+    correct: "動作の同時進行を示す接続助詞（〜しながら）",
+    wrongs: ["逆接を示す接続助詞（〜けれども）", "順接の仮定条件を示す接続助詞（〜たら）", "詠嘆を表す終助詞"],
+    explanation: "「つつ」が連用形に付いて、月を眺める動作と歌を詠む動作が同時に行われることを示しています。",
+  },
+  // ── 係助詞（4問） ──
+  {
+    id: "p09",
+    source: "例文",
+    sentence: "この山ぞ、いと高き。",
+    particle: "ぞ",
+    targetText: "この山ぞ",
+    category: "係助詞",
+    correct: "強意を示す係助詞（結びは連体形）",
+    wrongs: ["疑問を示す係助詞（結びは連体形）", "逆接を示す接続助詞", "詠嘆を表す終助詞"],
+    explanation: "「ぞ」は強意の係助詞で、結びは連体形になります。文末の「高き」が形容詞「高し」の連体形で結んでいます。",
+  },
+  {
+    id: "p10",
+    source: "徒然草（序段）",
+    sentence: "つれづれなるままに、日暮らし、硯に向かひて、心にうつりゆくよしなしごとを、そこはかとなく書きつくれば、あやしうこそものぐるほしけれ。",
+    particle: "こそ",
+    targetText: "あやしうこそ",
+    category: "係助詞",
+    correct: "強意を示す係助詞（結びは已然形）",
+    wrongs: ["疑問を示す係助詞（結びは連体形）", "願望を表す終助詞", "逆接を示す接続助詞"],
+    explanation: "「こそ」は強意の係助詞で、結びは已然形になる唯一の係助詞です。文末の「ものぐるほしけれ」が已然形で結んでいます。",
+  },
+  {
+    id: "p11",
+    source: "徒然草（花は盛りに）",
+    sentence: "花は盛りに、月は隈なきをのみ見るものかは。",
+    particle: "か",
+    targetText: "ものかは",
+    category: "係助詞",
+    correct: "反語を示す係助詞（結びは連体形）",
+    wrongs: ["強意を示す係助詞（結びは已然形）", "詠嘆を表す終助詞", "主語を示す格助詞"],
+    explanation: "「か」は疑問・反語の係助詞で、結びは連体形です。ここでは「見るものだろうか、いやそうではない」という反語を表し、「見る」が連体形で「もの」にかかって結んでいます。",
+  },
+  {
+    id: "p12",
+    source: "例文",
+    sentence: "翁なむ、昔を忘るる。",
+    particle: "なむ",
+    targetText: "翁なむ",
+    category: "係助詞",
+    correct: "強意を示す係助詞（結びは連体形）",
+    wrongs: ["疑問を示す係助詞（結びは連体形）", "禁止を表す終助詞", "丁寧を表す助動詞"],
+    explanation: "「なむ」は強意の係助詞で、結びは連体形です。文末の「忘るる」が下二段動詞「忘る」の連体形で結んでいます。推量の助動詞「む」とは別物です。",
+  },
+  // ── 終助詞（4問） ──
+  {
+    id: "p13",
+    source: "例文",
+    sentence: "都の桜を見ばや。",
+    particle: "ばや",
+    targetText: "見ばや",
+    category: "終助詞",
+    correct: "自分の願望を表す終助詞（〜たい）",
+    wrongs: ["他者への願望を表す終助詞（〜てほしい）", "詠嘆を表す終助詞（〜だなあ）", "疑問を表す終助詞"],
+    explanation: "「ばや」は動詞の未然形に付いて、話し手自身の願望「〜したい」を表す終助詞です。",
+  },
+  {
+    id: "p14",
+    source: "例文",
+    sentence: "故郷の山、懐かしきかな。",
+    particle: "かな",
+    targetText: "懐かしきかな",
+    category: "終助詞",
+    correct: "詠嘆を表す終助詞（〜だなあ）",
+    wrongs: ["疑問を表す係助詞", "願望を表す終助詞（〜たい）", "禁止を表す終助詞（〜するな）"],
+    explanation: "文末の「かな」は、しみじみとした感動を表す詠嘆の終助詞です。疑問の係助詞「か」とは位置も働きも異なります。",
+  },
+  {
+    id: "p15",
+    source: "例文",
+    sentence: "春の花を、一目見てしがな。",
+    particle: "がな",
+    targetText: "見てしがな",
+    category: "終助詞",
+    correct: "願望を表す終助詞（〜たいなあ）",
+    wrongs: ["詠嘆だけを表す終助詞（〜だなあ）", "疑問を表す係助詞", "打消を表す助動詞"],
+    explanation: "「てしがな」は「〜したいなあ」という願望を表す、決まった形の終助詞です。",
+  },
+  {
+    id: "p16",
+    source: "例文",
+    sentence: "翁、「心配すな。必ず勝つぞ」と言ふ。",
+    particle: "ぞ",
+    targetText: "勝つぞ",
+    category: "終助詞",
+    correct: "文末で強く念押しする終助詞",
+    wrongs: ["文中で結びを導く係助詞", "疑問を表す終助詞", "願望を表す終助詞"],
+    explanation: "文末にある「ぞ」は、文を強く言い切って念押しする終助詞です。文中にあって結びを導く係助詞の「ぞ」とは、位置で見分けます。",
+  },
+  // ── 副助詞（4問） ──
+  {
+    id: "p17",
+    source: "例文",
+    sentence: "酒を少しのみ飲む。",
+    particle: "のみ",
+    targetText: "少しのみ",
+    category: "副助詞",
+    correct: "限定を示す副助詞（〜だけ）",
+    wrongs: ["添加を示す副助詞（〜までも）", "程度の甚だしさだけを示す副助詞", "逆接を示す接続助詞"],
+    explanation: "「のみ」は「少し」だけに限るという限定を表す副助詞です。",
+  },
+  {
+    id: "p18",
+    source: "例文",
+    sentence: "泣くばかりにて、物を言はず。",
+    particle: "ばかり",
+    targetText: "泣くばかり",
+    category: "副助詞",
+    correct: "限定を示す副助詞（〜ばかり）",
+    wrongs: ["理由を示す格助詞", "逆接を示す接続助詞", "願望を表す終助詞"],
+    explanation: "「ばかり」は、泣くことだけに限られているという限定を表す副助詞です。「泣いてばかりいて」という使い方です。",
+  },
+  {
+    id: "p19",
+    source: "枕草子（秋は夕暮れ）",
+    sentence: "秋は夕暮れ。夕日のさして山の端いと近うなりたるに、烏の寝所へ行くとて、三つ四つ、二つ三つなど飛び急ぐさへあはれなり。",
+    particle: "さへ",
+    targetText: "飛び急ぐさへ",
+    category: "副助詞",
+    correct: "添加・例示を示す副助詞（〜までも・〜さえ）",
+    wrongs: ["限定を示す副助詞（〜だけ）", "打消と呼応する副助詞（〜さえ〜ない）", "疑問を示す係助詞"],
+    explanation: "「さへ」は、烏が飛び急ぐ様子までもが趣深い一例として加わる、添加・例示の副助詞です。肯定文で使われているので、打消と呼応する用法ではありません。",
+  },
+  {
+    id: "p20",
+    source: "例文",
+    sentence: "その名をだに聞かず。",
+    particle: "だに",
+    targetText: "名をだに",
+    category: "副助詞",
+    correct: "打消と呼応して最小限の例示を示す副助詞（〜さえ）",
+    wrongs: ["添加を示す副助詞（〜までも）", "限定を示す副助詞（〜だけ）", "順接を示す接続助詞"],
+    explanation: "「だに」は打消の「ず」と呼応して、「名前さえ聞かない」という最小限の例示を表す副助詞です。",
   },
 ];

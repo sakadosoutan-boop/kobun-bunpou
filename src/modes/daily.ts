@@ -109,6 +109,7 @@ export function applyDailyCompletion(
 
 export const dailyMode: ModeDefinition = {
   id: 'daily',
+  section: 'special',
   name: '日課祓い',
   label: '日課祓い（デイリー）',
   description: '1日1セット全5問。接続と係り結びの日替わり修練で連続記録を伸ばせ',

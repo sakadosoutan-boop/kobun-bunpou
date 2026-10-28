@@ -2,33 +2,31 @@ import { GameMode } from '../types';
 import { ModeDefinition } from './types';
 import { storyMode } from './story';
 import { endlessMode } from './endless';
-import { timeAttackMode } from './timeattack';
 import { dailyMode } from './daily';
-import { suddenDeathMode } from './suddendeath';
-import { meaningMode } from './meaning';
 import { reviewMode } from './review';
-import { readingMode } from './reading';
-import { conjugationMode } from './conjugation';
 import { bossRushMode } from './bossrush';
 import { keigoMode } from './keigo';
 import { examMode } from './exam';
+import { verbsMode } from './verbs';
+import { auxMode } from './aux';
+import { wordsMode } from './words';
+import { particlesMode } from './particles';
 
 /**
- * モードレジストリ。タイトル画面はこの一覧順でモードボタンを描画する。
- * 新モードはここに1行追加するだけでタイトル画面に並ぶ。
+ * モードレジストリ。タイトル画面は section ごとにこの一覧を描画する。
+ * 並び順: 本編（story）→ 分野（field）→ 特別枠（special）。
  */
 export const MODE_REGISTRY: ModeDefinition[] = [
   storyMode,
-  endlessMode,
-  timeAttackMode,
-  dailyMode,
-  suddenDeathMode,
-  meaningMode,
-  reviewMode,
-  readingMode,
-  conjugationMode,
-  bossRushMode,
+  verbsMode,
+  auxMode,
   keigoMode,
+  wordsMode,
+  particlesMode,
+  endlessMode,
+  dailyMode,
+  reviewMode,
+  bossRushMode,
   examMode,
 ];
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Stage, ChoiceOption, GameMode } from '../types';
+import { Stage, ChoiceOption, GameMode, RuleVariant } from '../types';
 import { BattleEffects, FloatingDamage } from './BattleEffects';
 
 interface BattleScreenProps {
@@ -15,6 +15,7 @@ interface BattleScreenProps {
   /** 奥義発動 */
   onUseOugi: () => void;
   gameMode: GameMode;
+  ruleVariant: RuleVariant;
   combo: number;
   enemyHp: number;
   enemyMaxHp: number;
@@ -47,6 +48,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   ougiUsed,
   onUseOugi,
   gameMode,
+  ruleVariant,
   combo,
   enemyHp,
   enemyMaxHp,
@@ -71,6 +73,15 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   onCardSelected,
 }) => {
   const [imageError, setImageError] = useState(false);
+  const FIELD_LABELS: Partial<Record<GameMode, string>> = {
+    verbs: '🥋 動詞系の陣',
+    aux: '🔮 助動詞系の陣',
+    keigo: '👑 敬語の陣',
+    words: '📖 単語の陣',
+    particles: '✒️ 助詞の陣',
+  };
+  const fieldLabel = FIELD_LABELS[gameMode];
+  const isFieldHeader = fieldLabel !== undefined;
   const enemyHpPercent = Math.max(0, (enemyHp / enemyMaxHp) * 100);
   const playerHpPercent = Math.max(0, playerHp);
 
@@ -86,43 +97,30 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
       {/* Top Header Bar */}
       <div className="header-bar">
         <div className="header-stage-info">
-          {gameMode === 'timeattack' ? (
+          {ruleVariant === 'timeattack' && isFieldHeader ? (
             <div className="time-attack-status">
+              <span id="stage-label">{fieldLabel}</span>
               <span className={`timer-badge ${timeRemaining <= 10 ? 'timer-urgent' : ''}`}>
                 ⏳ {timeRemaining}秒
               </span>
-              <span className="score-badge">得点: <b>{score}</b></span>
+              <span className="score-badge">正解: <b>{score}</b></span>
             </div>
-          ) : gameMode === 'suddendeath' ? (
+          ) : ruleVariant === 'suddendeath' && isFieldHeader ? (
             <div className="time-attack-status">
+              <span id="stage-label">{fieldLabel}</span>
               <span className="score-badge">⚔️ 連続正解: <b>{score}</b></span>
             </div>
           ) : gameMode === 'daily' ? (
             <span id="stage-label">📿 日課祓い</span>
-          ) : gameMode === 'meaning' ? (
+          ) : isFieldHeader ? (
             <div className="time-attack-status">
-              <span id="stage-label">🔮 言霊の真価</span>
+              <span id="stage-label">{fieldLabel}</span>
               <span className="score-badge">正解: <b>{score}</b></span>
             </div>
           ) : gameMode === 'review' ? (
             <div className="time-attack-status">
               <span id="stage-label">🌀 怨念回収戦</span>
               <span className="score-badge">回収: <b>{score}</b></span>
-            </div>
-          ) : gameMode === 'reading' ? (
-            <div className="time-attack-status">
-              <span id="stage-label">📚 古文の間</span>
-              <span className="score-badge">正解: <b>{score}</b></span>
-            </div>
-          ) : gameMode === 'conjugation' ? (
-            <div className="time-attack-status">
-              <span id="stage-label">🥋 型稽古</span>
-              <span className="score-badge">正解: <b>{score}</b></span>
-            </div>
-          ) : gameMode === 'keigo' ? (
-            <div className="time-attack-status">
-              <span id="stage-label">👑 敬語の陣</span>
-              <span className="score-badge">正解: <b>{score}</b></span>
             </div>
           ) : gameMode === 'exam' ? (
             <div className="time-attack-status">
@@ -186,14 +184,14 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           {stage.name}
         </div>
 
-        {gameMode !== 'timeattack' &&
-          gameMode !== 'suddendeath' &&
-          gameMode !== 'meaning' &&
-          gameMode !== 'review' &&
-          gameMode !== 'reading' &&
-          gameMode !== 'conjugation' &&
-          gameMode !== 'keigo' &&
-          gameMode !== 'exam' && (
+        {(gameMode === 'story' || gameMode === 'bossrush') && (
+          <div className="weakness-chip">弱点：{stage.weaknessLabel}</div>
+        )}
+
+        {(gameMode === 'story' ||
+          gameMode === 'bossrush' ||
+          gameMode === 'endless' ||
+          gameMode === 'daily') && (
           <div className="hp-container">
             <div
               id="enemy-hp-bar"

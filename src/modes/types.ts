@@ -34,9 +34,14 @@ export interface ModeRules {
  * 3. 特殊な進行ルールが必要なら App.tsx の開始処理・ターン評価に分岐を足す
  *    （questionCount / mistakeLimit / timerSeconds / enemyStyle で表せる範囲は共通処理が面倒を見る）
  */
+/** タイトル画面のセクション */
+export type ModeSection = 'story' | 'field' | 'special';
+
 export interface ModeDefinition {
   /** モードID（GameMode と一致） */
   id: GameMode;
+  /** タイトル画面の表示セクション */
+  section: ModeSection;
   /** 短い名称 */
   name: string;
   /** 和風の表示名（タイトル画面に出る正式名称） */

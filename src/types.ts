@@ -32,6 +32,9 @@ export interface KakariProblem {
   wrongs: KakariChoice[];
 }
 
+/** ボスの弱点分野（本編・ボスラッシュで加重出題＆ダメージ1.5倍） */
+export type WeaknessKind = 'verb' | 'kakari' | 'keigo';
+
 export interface Stage {
   name: string;
   emoji: string;
@@ -39,6 +42,8 @@ export interface Stage {
   hp: number;
   label: string;
   desc: string;
+  weakness: WeaknessKind;
+  weaknessLabel: string;
 }
 
 export interface MistakeItem {
@@ -136,6 +141,47 @@ export interface KeigoProblem {
   explanation: string;
 }
 
+/** 古文単語問題（単語の陣）：文脈文中の古文単語の意味を問う */
+export interface WordProblem {
+  id: string;
+  /** 対象の古文単語（基本形の表記。例: あらまほし） */
+  word: string;
+  /** 文脈を特定するための短い古文の文 */
+  sentence: string;
+  /** 文中で問う箇所の表記（活用した形のまま。例: あらまほしけれ） */
+  targetText: string;
+  /** 正解の現代語訳 */
+  correct: string;
+  /** 誤答の現代語訳（3つ） */
+  wrongs: string[];
+  /** 正解後の短い解説（文脈から意味が決まる根拠を含む） */
+  explanation: string;
+}
+
+/** 助詞の働きの5分類（助詞問題の分類フィールド） */
+export type ParticleCategory = '格助詞' | '接続助詞' | '係助詞' | '終助詞' | '副助詞';
+
+/** 助詞問題（助詞の陣）：実文中の助詞の働きを問う */
+export interface ParticleProblem {
+  id: string;
+  /** 出典名（例: 方丈記）。例文の場合は「例文」と明記する */
+  source: string;
+  /** 提示する古文の文 */
+  sentence: string;
+  /** 対象の助詞（例: が、こそ、ばや） */
+  particle: string;
+  /** 文中で問う箇所の表記（例: 翁が、ものぐるほしけれ） */
+  targetText: string;
+  /** 助詞の5分類 */
+  category: ParticleCategory;
+  /** 正解の働きのラベル */
+  correct: string;
+  /** 誤答の働きのラベル（3つ） */
+  wrongs: string[];
+  /** 解説（働きが決まる根拠・係り結びの結び等を含む） */
+  explanation: string;
+}
+
 /**
  * 週間ミッションの状態。
  * weekKey（その週の月曜の日付キー）が変わると自動で作り直される。
@@ -161,6 +207,7 @@ export interface ReviewQueueItem {
   /**
    * 問題の識別キー。
    * - verb:<動詞表記> / kakari:<係助詞> / meaning:<問題id> / reading:<問題id> / conj:<動詞>:<活用形>
+   * - keigo:<問題id> / word:<問題id> / particle:<問題id>
    */
   key: string;
   /** 連続正解レベル（0〜2。次回正解で卒業するのはレベル2） */
@@ -170,19 +217,27 @@ export interface ReviewQueueItem {
 }
 
 export type ScreenState = 'title' | 'battle' | 'result';
+/**
+ * ゲームモード（第5弾で再編）。
+ * 独立モードだった meaning / reading / conjugation / timeattack / suddendeath は廃止し、
+ * 文法分野モード（verbs / aux / keigo / words / particles）＋ルールバリアントへ移行した。
+ * timeAttackHighScore / suddenDeathBest は全体記録としてプロフィールに残る。
+ */
 export type GameMode =
   | 'story'
   | 'endless'
-  | 'timeattack'
   | 'daily'
-  | 'suddendeath'
-  | 'meaning'
   | 'review'
-  | 'reading'
-  | 'conjugation'
   | 'bossrush'
   | 'keigo'
-  | 'exam';
+  | 'exam'
+  | 'verbs'
+  | 'aux'
+  | 'words'
+  | 'particles';
+
+/** 分野モード共通のルールバリアント */
+export type RuleVariant = 'normal' | 'timeattack' | 'suddendeath';
 
 export interface CourtRank {
   title: string;

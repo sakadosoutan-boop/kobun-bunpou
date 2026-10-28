@@ -8,6 +8,7 @@ import {
   MistakeItem,
   Stage,
   PlayerProfile,
+  RuleVariant,
 } from './types';
 import {
   VERB_PROBLEMS,
@@ -23,7 +24,6 @@ import {
   getHeldRankInfo,
 } from './data';
 import { loadPlayerProfile, savePlayerProfile, DEFAULT_PROFILE } from './storage';
-import { getModeDefinition } from './modes/registry';
 import {
   DailyQuestion,
   applyDailyCompletion,
@@ -32,17 +32,21 @@ import {
   getYesterdayKey,
   pickDailyStageIndex,
 } from './modes/daily';
-import { SessionQuestion, reviewKeyFor, shuffledCopy } from './modes/session';
+import {
+  SessionQuestion,
+  reviewKeyFor,
+  shuffledCopy,
+  buildFieldSession,
+  isFieldMode,
+  FIELD_SESSION_COUNT,
+  FIELD_TIMEATTACK_COUNT,
+} from './modes/session';
 import {
   buildReviewSession,
   registerReviewMistake,
   applyReviewCorrect,
 } from './modes/review';
-import { MEANING_SESSION_COUNT } from './modes/meaning';
-import { READING_SESSION_COUNT } from './modes/reading';
-import { CONJUGATION_SESSION_COUNT } from './modes/conjugation';
 import {
-  KEIGO_SESSION_COUNT,
   KEIGO_DIRECTION_CHOICES,
   keigoDirectionLabel,
 } from './modes/keigo';
@@ -67,6 +71,10 @@ export const App: React.FC = () => {
   const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
   const [screen, setScreen] = useState<ScreenState>('title');
   const [gameMode, setGameMode] = useState<GameMode>('story');
+  const [ruleVariant, setRuleVariant] = useState<RuleVariant>('normal');
+  const ruleVariantRef = useRef<RuleVariant>('normal');
+  const currentStageRef = useRef<Stage>(STAGES[0]);
+  const currentBattleKindRef = useRef<'verb' | 'kakari' | 'keigo'>('verb');
 
   // Modals
   const [isRuleOpen, setIsRuleOpen] = useState(false);
@@ -223,9 +231,9 @@ export const App: React.FC = () => {
     setIsBgmOn(state);
   };
 
-  // Timer loop for Time Attack Mode
+  // Timer loop for the timeattack rule variant (field modes)
   useEffect(() => {
-    if (screen !== 'battle' || gameMode !== 'timeattack') return;
+    if (screen !== 'battle' || ruleVariant !== 'timeattack' || !isFieldMode(gameMode)) return;
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -239,7 +247,8 @@ export const App: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [screen, gameMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, gameMode, ruleVariant]);
 
   // Build the 4 choices for a verb-connection problem (1 correct connection + 3 others)
   const buildVerbChoices = (problem: VerbProblem): ChoiceOption[] => {
@@ -270,6 +279,9 @@ export const App: React.FC = () => {
     isFeverRef.current = false;
     setIsFever(false);
     currentKakariRef.current = null;
+    currentBattleKindRef.current = 'verb';
+    setSentenceText(null);
+    setSentenceHighlight(null);
 
     setGuideText('次の動詞に接続する助動詞を選べ');
     const problem = VERB_PROBLEMS[Math.floor(Math.random() * VERB_PROBLEMS.length)];
@@ -286,6 +298,9 @@ export const App: React.FC = () => {
     isFeverRef.current = true;
     setIsFever(true);
     sound.playSpecial();
+    currentBattleKindRef.current = 'kakari';
+    setSentenceText(null);
+    setSentenceHighlight(null);
 
     const kakari = KAKARI_PROBLEMS[Math.floor(Math.random() * KAKARI_PROBLEMS.length)];
     currentKakariRef.current = kakari;
@@ -302,6 +317,68 @@ export const App: React.FC = () => {
     setCards(buildKakariChoices(kakari));
     setIsLocked(false);
   }, []);
+
+  // Keigo quiz turn inside story / bossrush flow (session-style rendering, HP damage)
+  const setupStoryKeigoTurn = useCallback(() => {
+    isFeverRef.current = false;
+    setIsFever(false);
+    currentKakariRef.current = null;
+    currentProblemRef.current = null;
+    currentBattleKindRef.current = 'keigo';
+    const problem = KEIGO_PROBLEMS[Math.floor(Math.random() * KEIGO_PROBLEMS.length)];
+    setSentenceText(problem.sentence);
+    setSentenceHighlight(problem.expression);
+    setGuideText(`敬語「${problem.expression}」の敬意の方向を選べ`);
+    setTargetWord(problem.expression);
+    setTargetForm(`出典：${problem.source}｜${problem.relation}`);
+    currentQuizRef.current = {
+      reviewKey: `keigo:${problem.id}`,
+      correctAnswer: keigoDirectionLabel(problem.direction),
+      explanation: problem.explanation,
+      targetWord: problem.expression,
+      targetForm: `敬語（${problem.source}）`,
+      isKakari: false,
+    };
+    setCards(
+      KEIGO_DIRECTION_CHOICES.map((c) => ({
+        text: c.text,
+        sub: c.sub,
+        isCorrect: c.direction === problem.direction,
+      })).sort(() => 0.5 - Math.random())
+    );
+    setIsLocked(false);
+  }, []);
+
+  // Story / bossrush turn generator weighted toward the current boss's weakness (~60%)
+  const setupStoryTurn = useCallback(() => {
+    const weakness = currentStageRef.current.weakness;
+    const kinds: ('verb' | 'kakari' | 'keigo')[] = ['verb', 'kakari', 'keigo'];
+    let kind: 'verb' | 'kakari' | 'keigo';
+    if (Math.random() < 0.6) {
+      kind = weakness;
+    } else {
+      const others = kinds.filter((k) => k !== weakness);
+      kind = others[Math.floor(Math.random() * others.length)];
+    }
+    if (kind === 'kakari') {
+      triggerKakariMusubi();
+    } else if (kind === 'keigo') {
+      setupStoryKeigoTurn();
+    } else {
+      setupNormalTurn();
+    }
+  }, [setupNormalTurn, triggerKakariMusubi, setupStoryKeigoTurn]);
+
+  /** Weakness damage: x1.5 (rounded) when the question field matches the boss weakness (story/bossrush only) */
+  const calcBattleDamage = (
+    base: number,
+    kind: 'verb' | 'kakari' | 'keigo'
+  ): { damage: number; isWeakness: boolean } => {
+    const isWeakness =
+      (gameMode === 'story' || gameMode === 'bossrush') &&
+      currentStageRef.current.weakness === kind;
+    return { damage: isWeakness ? Math.round(base * 1.5) : base, isWeakness };
+  };
 
   // Daily mode turn: serve the date-seeded queue in order (verb & kakari mixed)
   const setupDailyTurn = useCallback((index: number) => {
@@ -472,6 +549,46 @@ export const App: React.FC = () => {
           isCorrect: c.direction === problem.direction,
         })).sort(() => 0.5 - Math.random())
       );
+    } else if (question.kind === 'word') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(problem.sentence);
+      setSentenceHighlight(problem.targetText);
+      setGuideText(`${progress} 古文単語「${problem.word}」の意味を選べ`);
+      setTargetWord(problem.targetText);
+      setTargetForm(`「${problem.word}」の意味は？`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: problem.targetText,
+        targetForm: `単語（${problem.word}）`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else if (question.kind === 'particle') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(problem.sentence);
+      setSentenceHighlight(problem.targetText);
+      setGuideText(`${progress} 助詞「${problem.particle}」の働きを選べ`);
+      setTargetWord(problem.targetText);
+      setTargetForm(`出典：${problem.source}｜助詞「${problem.particle}」`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: problem.targetText,
+        targetForm: `助詞（${problem.particle}・${problem.category}）`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
     } else {
       // conjugation
       isFeverRef.current = false;
@@ -638,6 +755,14 @@ export const App: React.FC = () => {
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 320);
 
+      // 分野モード・斬撃ルール: 初回の誤答で即終了（敗北扱い）
+      if (ruleVariantRef.current === 'suddendeath' && isFieldMode(gameMode)) {
+        setTimeout(() => {
+          sound.playDamage();
+          finishBattleRun(false, sessionCorrectRef.current, 0);
+        }, 1500);
+        return;
+      }
       // 昇進試験: ミスが上限を超えたら不合格で即終了
       if (gameMode === 'exam') {
         examMistakesRef.current += 1;
@@ -724,21 +849,17 @@ export const App: React.FC = () => {
         earnedExp = win ? 380 + maxCombo * 10 : stageIndex * 80 + maxCombo * 5;
       } else if (gameMode === 'endless') {
         earnedExp = finalWave * 45 + maxCombo * 8;
-      } else if (gameMode === 'timeattack') {
-        earnedExp = Math.round(finalScore * 0.45) + maxCombo * 6;
       } else if (gameMode === 'daily') {
         earnedExp = 80 + maxCombo * 5;
-      } else if (gameMode === 'suddendeath') {
-        earnedExp = finalScore * 12 + maxCombo * 4;
-      } else if (gameMode === 'meaning') {
-        earnedExp = finalScore * 10 + maxCombo * 5;
-      } else if (gameMode === 'review') {
-        earnedExp = finalScore * 10 + maxCombo * 5;
-      } else if (gameMode === 'reading') {
-        earnedExp = finalScore * 12 + maxCombo * 5;
-      } else if (gameMode === 'conjugation') {
-        earnedExp = finalScore * 8 + maxCombo * 4;
-      } else if (gameMode === 'keigo') {
+      } else if (
+        gameMode === 'verbs' ||
+        gameMode === 'aux' ||
+        gameMode === 'words' ||
+        gameMode === 'particles' ||
+        gameMode === 'keigo' ||
+        gameMode === 'review'
+      ) {
+        // 分野モード（全ルール共通）・復習: 正解数×10＋連撃ボーナスで統一
         earnedExp = finalScore * 10 + maxCombo * 5;
       } else if (gameMode === 'exam') {
         earnedExp = win ? 150 + finalScore * 8 : finalScore * 5;
@@ -752,8 +873,14 @@ export const App: React.FC = () => {
         const nextExp = prev.exp + earnedExp;
         const nextStoryClears = win && gameMode === 'story' ? prev.storyClears + 1 : prev.storyClears;
         const nextEndlessHigh = gameMode === 'endless' ? Math.max(prev.endlessHighWave, finalWave) : prev.endlessHighWave;
-        const nextTimeHigh = gameMode === 'timeattack' ? Math.max(prev.timeAttackHighScore, finalScore) : prev.timeAttackHighScore;
-        const nextSuddenBest = gameMode === 'suddendeath' ? Math.max(prev.suddenDeathBest, finalScore) : prev.suddenDeathBest;
+        const nextTimeHigh =
+          ruleVariantRef.current === 'timeattack' && isFieldMode(gameMode)
+            ? Math.max(prev.timeAttackHighScore, finalScore)
+            : prev.timeAttackHighScore;
+        const nextSuddenBest =
+          ruleVariantRef.current === 'suddendeath' && isFieldMode(gameMode)
+            ? Math.max(prev.suddenDeathBest, finalScore)
+            : prev.suddenDeathBest;
         const dailyCompletion =
           gameMode === 'daily' && win
             ? applyDailyCompletion(prev, getDateKey(), getYesterdayKey())
@@ -816,7 +943,7 @@ export const App: React.FC = () => {
 
   const concludeTimeAttack = useCallback(() => {
     sound.playFanfare();
-    finishBattleRun(true, score, 0);
+    finishBattleRun(true, sessionActiveRef.current ? sessionCorrectRef.current : score, 0);
   }, [finishBattleRun, score]);
 
   // Turn outcome evaluation
@@ -848,31 +975,6 @@ export const App: React.FC = () => {
         return;
       }
 
-      if (gameMode === 'suddendeath') {
-        // 誤答したターンはプレイヤーHPが減った状態で届く。それを検知して即終了する
-        if (nextPlayerHp < playerHp) {
-          sound.playDamage();
-          finishBattleRun(false, streakRef.current, 0);
-          return;
-        }
-        if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever) {
-          triggerKakariMusubi();
-        } else {
-          setupNormalTurn();
-        }
-        return;
-      }
-
-      if (gameMode === 'timeattack') {
-        // In time attack, enemy HP is infinite/doesn't stop turns
-        if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever) {
-          triggerKakariMusubi();
-        } else {
-          setupNormalTurn();
-        }
-        return;
-      }
-
       // Story & Endless Mode HP handling
       if (nextEnemyHp <= 0) {
         if (gameMode === 'story' || gameMode === 'bossrush') {
@@ -880,6 +982,7 @@ export const App: React.FC = () => {
             const newIdx = currentStageIdx + 1;
             setStageIndex(newIdx);
             setCurrentStage(STAGES[newIdx]);
+            currentStageRef.current = STAGES[newIdx];
             addEnemyDefeatMission();
             sound.playFanfare();
             setMessageLog(<span className="log-success">妖怪を討滅！次の幕へ進む！</span>);
@@ -889,7 +992,7 @@ export const App: React.FC = () => {
                 gameMode === 'bossrush' ? Math.round(nextStage.hp * 1.5) : nextStage.hp;
               setEnemyMaxHp(stageHp);
               setEnemyHp(stageHp);
-              setupNormalTurn();
+              setupStoryTurn();
             }, 1000);
           } else {
             sound.playFanfare();
@@ -908,6 +1011,7 @@ export const App: React.FC = () => {
           setTimeout(() => {
             const nextEnemy = generateEndlessStage(nextWave);
             setCurrentStage(nextEnemy);
+            currentStageRef.current = nextEnemy;
             setEnemyMaxHp(nextEnemy.hp);
             setEnemyHp(nextEnemy.hp);
             setupNormalTurn();
@@ -925,6 +1029,8 @@ export const App: React.FC = () => {
       // Check if fever triggers
       if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever) {
         triggerKakariMusubi();
+      } else if (gameMode === 'story' || gameMode === 'bossrush') {
+        setupStoryTurn();
       } else {
         setupNormalTurn();
       }
@@ -939,18 +1045,20 @@ export const App: React.FC = () => {
       setupDailyTurn,
       setupNormalTurn,
       setupReviewDrillTurn,
+      setupStoryTurn,
       triggerKakariMusubi,
     ]
   );
 
-  // Start chosen mode
-  const handleStartMode = (mode: GameMode) => {
+  // Start chosen mode (field modes take a rule variant)
+  const handleStartMode = (mode: GameMode, rule: RuleVariant = 'normal') => {
     sound.init();
     sound.startBgm();
     sound.playBell();
 
-    const modeDef = getModeDefinition(mode);
     setGameMode(mode);
+    setRuleVariant(rule);
+    ruleVariantRef.current = rule;
     setCombo(0);
     setMaxCombo(0);
     setMistakes([]);
@@ -962,85 +1070,59 @@ export const App: React.FC = () => {
     setOugiGauge(0);
     setOugiUsed(false);
     examMistakesRef.current = 0;
+    streakRef.current = 0;
     isFeverRef.current = false;
     setIsFever(false);
+    currentBattleKindRef.current = 'verb';
+
+    const setStageBoth = (stage: Stage) => {
+      setCurrentStage(stage);
+      currentStageRef.current = stage;
+    };
 
     if (mode === 'story') {
       setStageIndex(0);
-      setCurrentStage(STAGES[0]);
+      setStageBoth(STAGES[0]);
       setEnemyMaxHp(STAGES[0].hp);
       setEnemyHp(STAGES[0].hp);
       setPlayerHp(100);
     } else if (mode === 'endless') {
       setWave(1);
       const enemy = generateEndlessStage(1);
-      setCurrentStage(enemy);
+      setStageBoth(enemy);
       setEnemyMaxHp(enemy.hp);
       setEnemyHp(enemy.hp);
-      setPlayerHp(100);
-    } else if (mode === 'timeattack') {
-      setTimeRemaining(modeDef.rules.timerSeconds ?? 60);
-      setScore(0);
-      setCurrentStage(STAGES[0]);
-      setEnemyMaxHp(9999);
-      setEnemyHp(9999);
       setPlayerHp(100);
     } else if (mode === 'daily') {
       // 日付シードでその日の出題セットと相手を決定（同日中は再挑戦しても同じ内容）
       const todayKey = getDateKey();
       dailyQueueRef.current = generateDailyQuestions(todayKey);
       dailyIndexRef.current = 0;
-      setCurrentStage(STAGES[pickDailyStageIndex(todayKey)]);
+      setStageBoth(STAGES[pickDailyStageIndex(todayKey)]);
       // 敵HPは表示専用。全5問ぶんのダメージを受け切れる値にする
       setEnemyMaxHp(300);
       setEnemyHp(300);
       setPlayerHp(100);
-    } else if (mode === 'suddendeath') {
-      streakRef.current = 0;
-      setScore(0);
-      setCurrentStage(STAGES[0]);
-      setEnemyMaxHp(9999);
-      setEnemyHp(9999);
-      setPlayerHp(100);
     } else if (mode === 'bossrush') {
       setStageIndex(0);
-      setCurrentStage(STAGES[0]);
+      setStageBoth(STAGES[0]);
       const hp = Math.round(STAGES[0].hp * 1.5);
       setEnemyMaxHp(hp);
       setEnemyHp(hp);
       setPlayerHp(100);
-    } else if (
-      mode === 'meaning' ||
-      mode === 'review' ||
-      mode === 'reading' ||
-      mode === 'conjugation' ||
-      mode === 'keigo' ||
-      mode === 'exam'
-    ) {
+    } else if (isFieldMode(mode) || mode === 'review' || mode === 'exam') {
       sessionActiveRef.current = true;
       sessionIndexRef.current = 0;
       sessionCorrectRef.current = 0;
       setScore(0);
-      setCurrentStage(STAGES[0]);
+      setStageBoth(STAGES[0]);
       setEnemyMaxHp(9999);
       setEnemyHp(9999);
       setPlayerHp(100);
-      if (mode === 'meaning') {
-        sessionQueueRef.current = shuffledCopy(MEANING_PROBLEMS)
-          .slice(0, MEANING_SESSION_COUNT)
-          .map((problem) => ({ kind: 'meaning' as const, problem }));
-      } else if (mode === 'reading') {
-        sessionQueueRef.current = shuffledCopy(READING_PROBLEMS)
-          .slice(0, READING_SESSION_COUNT)
-          .map((problem) => ({ kind: 'reading' as const, problem }));
-      } else if (mode === 'conjugation') {
-        sessionQueueRef.current = shuffledCopy(CONJUGATION_PROBLEMS)
-          .slice(0, CONJUGATION_SESSION_COUNT)
-          .map((problem) => ({ kind: 'conjugation' as const, problem }));
-      } else if (mode === 'keigo') {
-        sessionQueueRef.current = shuffledCopy(KEIGO_PROBLEMS)
-          .slice(0, KEIGO_SESSION_COUNT)
-          .map((problem) => ({ kind: 'keigo' as const, problem }));
+      if (isFieldMode(mode)) {
+        if (rule === 'timeattack') setTimeRemaining(60);
+        const count = rule === 'timeattack' ? FIELD_TIMEATTACK_COUNT : FIELD_SESSION_COUNT;
+        sessionQueueRef.current = buildFieldSession(mode, count);
       } else if (mode === 'exam') {
         // 昇進試験: 接続・係り結び・意味・読解・型の混合10問
         sessionQueueRef.current = shuffledCopy([
@@ -1073,6 +1155,8 @@ export const App: React.FC = () => {
       setupDailyTurn(0);
     } else if (sessionActiveRef.current) {
       setupSessionTurn(0);
+    } else if (mode === 'story' || mode === 'bossrush') {
+      setupStoryTurn();
     } else {
       setupNormalTurn();
     }
@@ -1102,8 +1186,8 @@ export const App: React.FC = () => {
   const handleUseOugi = () => {
     if (ougiUsed || ougiGauge < 100 || isLocked) return;
 
-    // タイムアタックでは「+5秒」に読み替える
-    if (gameMode === 'timeattack') {
+    // タイムアタック（ルール）では「+5秒」に読み替える
+    if (ruleVariantRef.current === 'timeattack') {
       sound.playSpecial();
       setOugiUsed(true);
       setOugiGauge(0);
@@ -1130,7 +1214,7 @@ export const App: React.FC = () => {
     if (isLocked) return;
     setIsLocked(true);
 
-    // Session-queue modes (meaning / review / reading / conjugation)
+    // Session-queue modes (field modes / review / exam)
     if (sessionActiveRef.current) {
       handleSessionAnswer(card);
       return;
@@ -1145,6 +1229,93 @@ export const App: React.FC = () => {
       savePlayerProfile(updated);
       return updated;
     });
+
+    if (
+      currentBattleKindRef.current === 'keigo' &&
+      (gameMode === 'story' || gameMode === 'bossrush') &&
+      currentQuizRef.current
+    ) {
+      const quiz = currentQuizRef.current;
+      if (card.isCorrect) {
+        sound.playSlash();
+        sound.playDrum();
+        const nextCombo = combo + 1;
+        setCombo(nextCombo);
+        if (nextCombo > maxCombo) setMaxCombo(nextCombo);
+        chargeOugi();
+        setProfile((prev) => {
+          const updated = applyMissions(
+            { ...prev, totalCorrect: prev.totalCorrect + 1 },
+            'totalCorrect',
+            'keigoCorrect'
+          );
+          savePlayerProfile(updated);
+          return updated;
+        });
+        const { damage, isWeakness } = calcBattleDamage(25 + nextCombo * 6, 'keigo');
+        const nextEnemyHp = Math.max(0, enemyHp - damage);
+        setEnemyHp(nextEnemyHp);
+        addDamagePopup(
+          isWeakness ? `-${damage} 弱点を突いた！` : `-${damage}`,
+          nextCombo >= 3 || isWeakness
+        );
+        setShowSlash(true);
+        setIsHitFlash(true);
+        setTimeout(() => {
+          setShowSlash(false);
+          setIsHitFlash(false);
+        }, 300);
+        setMessageLog(
+          <span className="log-success">
+            正解！{quiz.explanation}（{damage}ダメ{isWeakness ? '・弱点' : ''}）
+          </span>
+        );
+        setEnemyTransform('scale(0.88) translateY(6px)');
+        setTimeout(() => setEnemyTransform(''), 180);
+        setTimeout(() => {
+          evaluateNextTurn(nextEnemyHp, playerHp, nextCombo, false, stageIndex, wave);
+        }, 850);
+      } else {
+        sound.playDamage();
+        setCombo(0);
+        const recoil = 20;
+        const nextPlayerHp = Math.max(0, playerHp - recoil);
+        setPlayerHp(nextPlayerHp);
+        addDamagePopup(`-${recoil} 敬語不備`, false, true);
+        setMistakes((prev) => [
+          ...prev,
+          {
+            id: String(Date.now()),
+            targetWord: quiz.targetWord,
+            targetForm: quiz.targetForm,
+            chosenText: card.text,
+            chosenConn: card.sub || undefined,
+            correctAnswer: quiz.correctAnswer,
+            explanation: quiz.explanation,
+            isKakari: false,
+          },
+        ]);
+        setProfile((prev) => {
+          const updated = {
+            ...prev,
+            reviewQueue: registerReviewMistake(prev.reviewQueue, quiz.reviewKey, getDateKey()),
+          };
+          savePlayerProfile(updated);
+          return updated;
+        });
+        setMessageLog(
+          <span className="log-fail">
+            不正解…正解は「{quiz.correctAnswer}」。{quiz.explanation}
+          </span>
+        );
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 320);
+        setTimeout(() => {
+          evaluateNextTurn(enemyHp, nextPlayerHp, 0, false, stageIndex, wave);
+        }, 850);
+      }
+      return;
+    }
 
     if (isFeverRef.current && currentKakariRef.current) {
       const kakari = currentKakariRef.current;
@@ -1166,21 +1337,13 @@ export const App: React.FC = () => {
           return updated;
         });
 
-        const dmg = 75;
+        const { damage: dmg, isWeakness: kakariWeak } = calcBattleDamage(75, 'kakari');
         const nextEnemyHp = Math.max(0, enemyHp - dmg);
         setEnemyHp(nextEnemyHp);
-
-        if (gameMode === 'timeattack') {
-          const pts = 65;
-          setScore((s) => s + pts);
-          addDamagePopup(`+${pts}点 係り結び！`, true);
-        } else if (gameMode === 'suddendeath') {
-          streakRef.current += 1;
-          setScore(streakRef.current);
-          addDamagePopup(`${streakRef.current} 連続正解！`, true);
-        } else {
-          addDamagePopup(`-${dmg} 係り結び一閃！`, true);
-        }
+        addDamagePopup(
+          kakariWeak ? `-${dmg} 弱点を突いた！ 係り結び一閃！` : `-${dmg} 係り結び一閃！`,
+          true
+        );
 
         setShowSlash(true);
         setIsHitFlash(true);
@@ -1191,7 +1354,7 @@ export const App: React.FC = () => {
 
         setMessageLog(
           <span className="log-fever">
-            係り結び成就！「{kakari.particle}」の結びは【{kakari.targetForm}】！（{dmg}ダメ）
+            係り結び成就！「{kakari.particle}」の結びは【{kakari.targetForm}】！（{dmg}ダメ{kakariWeak ? '・弱点' : ''}）
           </span>
         );
         setEnemyTransform('scale(0.75) rotate(-12deg)');
@@ -1282,21 +1445,13 @@ export const App: React.FC = () => {
           return updated;
         });
 
-        const damage = 25 + nextCombo * 6;
+        const { damage, isWeakness } = calcBattleDamage(25 + nextCombo * 6, 'verb');
         const nextEnemyHp = Math.max(0, enemyHp - damage);
         setEnemyHp(nextEnemyHp);
-
-        if (gameMode === 'timeattack') {
-          const pts = 15 + nextCombo * 4;
-          setScore((s) => s + pts);
-          addDamagePopup(`+${pts}点`, nextCombo >= 3);
-        } else if (gameMode === 'suddendeath') {
-          streakRef.current += 1;
-          setScore(streakRef.current);
-          addDamagePopup(`${streakRef.current} 連続！`, nextCombo >= 3);
-        } else {
-          addDamagePopup(`-${damage}`, nextCombo >= 3);
-        }
+        addDamagePopup(
+          isWeakness ? `-${damage} 弱点を突いた！` : `-${damage}`,
+          nextCombo >= 3 || isWeakness
+        );
 
         setShowSlash(true);
         setIsHitFlash(true);
@@ -1307,7 +1462,7 @@ export const App: React.FC = () => {
 
         setMessageLog(
           <span className="log-success">
-            詠進成功！「{problem.word}＋{card.text}」（{damage}ダメ）
+            詠進成功！「{problem.word}＋{card.text}」（{damage}ダメ{isWeakness ? '・弱点' : ''}）
           </span>
         );
         setEnemyTransform('scale(0.88) translateY(6px)');
@@ -1394,6 +1549,7 @@ export const App: React.FC = () => {
           ougiUsed={ougiUsed}
           onUseOugi={handleUseOugi}
           gameMode={gameMode}
+          ruleVariant={ruleVariant}
           combo={combo}
           enemyHp={enemyHp}
           enemyMaxHp={enemyMaxHp}
@@ -1423,6 +1579,7 @@ export const App: React.FC = () => {
         <ResultScreen
           isWin={isWin}
           gameMode={gameMode}
+          ruleVariant={ruleVariant}
           maxCombo={maxCombo}
           mistakesCount={mistakes.length}
           stagesCleared={isWin ? 3 : stageIndex}
@@ -1431,7 +1588,7 @@ export const App: React.FC = () => {
           expGained={expGained}
           newTitles={newTitles}
           profile={profile}
-          onRestartSameMode={() => handleStartMode(gameMode)}
+          onRestartSameMode={() => handleStartMode(gameMode, ruleVariant)}
           onReturnToTitle={() => setScreen('title')}
           onOpenReview={() => setIsReviewOpen(true)}
           onOpenGrammar={() => setIsGrammarOpen(true)}

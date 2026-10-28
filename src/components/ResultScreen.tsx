@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameMode, PlayerProfile } from '../types';
+import { GameMode, PlayerProfile, RuleVariant } from '../types';
 import { getHeldRankInfo } from '../data';
 
 /** 戦績カード画像（PNG）をCanvasで描画してダウンロードさせる。外部送信は行わない。 */
@@ -95,6 +95,7 @@ function downloadResultCard(params: {
 interface ResultScreenProps {
   isWin: boolean;
   gameMode: GameMode;
+  ruleVariant: RuleVariant;
   maxCombo: number;
   mistakesCount: number;
   stagesCleared: number;
@@ -112,6 +113,7 @@ interface ResultScreenProps {
 export const ResultScreen: React.FC<ResultScreenProps> = ({
   isWin,
   gameMode,
+  ruleVariant,
   maxCombo,
   mistakesCount,
   stagesCleared,
@@ -127,7 +129,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 }) => {
   const { currentRank } = getHeldRankInfo(profile);
 
-  let modeHeading = '本編討伐・結末';
+  const FIELD_HEADINGS: Partial<Record<GameMode, string>> = {
+    verbs: '動詞系の陣・記録',
+    aux: '助動詞系の陣・記録',
+    words: '単語の陣・記録',
+    particles: '助詞の陣・記録',
+    keigo: '敬語の陣・記録',
+  };
+  const isField = FIELD_HEADINGS[gameMode] !== undefined;
+
+  let modeHeading = FIELD_HEADINGS[gameMode] ?? '本編討伐・結末';
   let modeTitle = isWin ? '免許皆伝！' : '気力尽きたり';
   let modeSubtitle = isWin ? '全三幕制覇・言霊成就' : '無念・再起を期す';
 
@@ -135,10 +146,6 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     modeHeading = '百鬼夜行・討伐記録';
     modeTitle = `${wave} 体撃破！`;
     modeSubtitle = wave >= 5 ? '百鬼を圧倒せし大活劇' : '妖魔の群れに呑まれり';
-  } else if (gameMode === 'timeattack') {
-    modeHeading = '六十秒一閃・成績';
-    modeTitle = `${score} 点獲得！`;
-    modeSubtitle = score >= 400 ? '神速の言霊使い' : 'さらなる速度を磨け';
   } else if (gameMode === 'daily') {
     modeHeading = '日課祓い・記録';
     modeTitle = '日課成就！';
@@ -146,17 +153,20 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       profile.dailyStreak > 0
         ? `連続 ${profile.dailyStreak} 日の修練、本日分を記録せり`
         : '本日の修練を完了せり';
-  } else if (gameMode === 'suddendeath') {
-    modeHeading = '斬撃一閃・記録';
-    modeTitle = `${score} 連続正解！`;
-    modeSubtitle =
-      score > 0 && score >= profile.suddenDeathBest
-        ? '自己最高記録に到達せり'
-        : '一撃に散れど、次こそは';
-  } else if (gameMode === 'meaning') {
-    modeHeading = '言霊の真価・記録';
-    modeTitle = `${score} 問正解！`;
-    modeSubtitle = mistakesCount === 0 ? '助動詞の意味を完全に見極めたり' : '意味の判別、さらに磨くべし';
+  } else if (isField) {
+    if (ruleVariant === 'suddendeath') {
+      modeTitle = `${score} 連続正解！`;
+      modeSubtitle =
+        score > 0 && score >= profile.suddenDeathBest
+          ? '自己最高記録に到達せり'
+          : '一撃に散れど、次こそは';
+    } else if (ruleVariant === 'timeattack') {
+      modeTitle = `${score} 問正解！`;
+      modeSubtitle = '六十秒一閃、神速の修練なり';
+    } else {
+      modeTitle = `${score} 問正解！`;
+      modeSubtitle = mistakesCount === 0 ? '分野の型、乱れなし' : '分野の修練、さらに磨くべし';
+    }
   } else if (gameMode === 'review') {
     modeHeading = '怨念回収戦・記録';
     modeTitle = `${score} 問回収！`;
@@ -164,22 +174,10 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       profile.reviewQueue.length > 0
         ? `残りの怨念 ${profile.reviewQueue.length} 件、時を置いて再び現れる`
         : '怨念は全て回収されたり';
-  } else if (gameMode === 'reading') {
-    modeHeading = '古文の間・記録';
-    modeTitle = `${score} 問正解！`;
-    modeSubtitle = mistakesCount === 0 ? '古典の実文を読み解ききったり' : '名文との対話、さらに深めるべし';
-  } else if (gameMode === 'conjugation') {
-    modeHeading = '型稽古・記録';
-    modeTitle = `${score} 問正解！`;
-    modeSubtitle = mistakesCount === 0 ? '型、乱れなし' : '活用の型、さらに身体に刻むべし';
   } else if (gameMode === 'bossrush') {
     modeHeading = '連戦の間・記録';
     modeTitle = isWin ? '三連戦制覇！' : '連戦終幕';
     modeSubtitle = isWin ? '回復なき連戦を制したり' : '大増量の妖怪に屈したり';
-  } else if (gameMode === 'keigo') {
-    modeHeading = '敬語の陣・記録';
-    modeTitle = `${score} 問正解！`;
-    modeSubtitle = mistakesCount === 0 ? '敬意の方向、寸分も違わず見極めたり' : '敬語の方向感覚、さらに磨くべし';
   } else if (gameMode === 'exam') {
     modeHeading = '昇進試験・結果';
     modeTitle = isWin ? '合格・昇進！' : '不合格';
@@ -248,20 +246,9 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               <span className="stat-value">{wave} 体</span>
             </div>
           )}
-          {gameMode === 'timeattack' && (
-            <div className="stat-col">
-              <span className="stat-label">総得点</span>
-              <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
-                {score}
-              </span>
-            </div>
-          )}
-          {(gameMode === 'meaning' ||
-            gameMode === 'reading' ||
-            gameMode === 'conjugation' ||
-            gameMode === 'keigo' ||
+          {(isField ||
             gameMode === 'exam' ||
-            gameMode === 'review') && (
+            gameMode === 'review') && ruleVariant !== 'suddendeath' && (
             <div className="stat-col">
               <span className="stat-label">正解数</span>
               <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
@@ -289,7 +276,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               </span>
             </div>
           )}
-          {gameMode === 'suddendeath' && (
+          {isField && ruleVariant === 'suddendeath' && (
             <>
               <div className="stat-col">
                 <span className="stat-label">連続正解</span>
