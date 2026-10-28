@@ -14,6 +14,7 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   dailyLastDate: '',
   dailyStreak: 0,
   suddenDeathBest: 0,
+  reviewQueue: [],
 };
 
 export function loadPlayerProfile(): PlayerProfile {

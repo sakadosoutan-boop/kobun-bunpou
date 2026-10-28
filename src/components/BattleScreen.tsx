@@ -4,6 +4,8 @@ import { BattleEffects, FloatingDamage } from './BattleEffects';
 
 interface BattleScreenProps {
   stage: Stage;
+  /** 例文読解・意味識別で表示する例文（通常モードでは null） */
+  sentenceText?: string | null;
   gameMode: GameMode;
   combo: number;
   enemyHp: number;
@@ -31,6 +33,7 @@ interface BattleScreenProps {
 
 export const BattleScreen: React.FC<BattleScreenProps> = ({
   stage,
+  sentenceText,
   gameMode,
   combo,
   enemyHp,
@@ -84,6 +87,28 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
             </div>
           ) : gameMode === 'daily' ? (
             <span id="stage-label">📿 日課祓い</span>
+          ) : gameMode === 'meaning' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">🔮 言霊の真価</span>
+              <span className="score-badge">正解: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'review' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">🌀 怨念回収戦</span>
+              <span className="score-badge">回収: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'reading' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">📚 古文の間</span>
+              <span className="score-badge">正解: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'conjugation' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">🥋 型稽古</span>
+              <span className="score-badge">正解: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'bossrush' ? (
+            <span id="stage-label">🔥 連戦の間：{stage.label}</span>
           ) : gameMode === 'endless' ? (
             <span id="stage-label">🌙 百鬼夜行：第{wave}体目</span>
           ) : (
@@ -139,7 +164,12 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           {stage.name}
         </div>
 
-        {gameMode !== 'timeattack' && gameMode !== 'suddendeath' && (
+        {gameMode !== 'timeattack' &&
+          gameMode !== 'suddendeath' &&
+          gameMode !== 'meaning' &&
+          gameMode !== 'review' &&
+          gameMode !== 'reading' &&
+          gameMode !== 'conjugation' && (
           <div className="hp-container">
             <div
               id="enemy-hp-bar"
@@ -149,6 +179,13 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           </div>
         )}
       </div>
+
+      {/* Sentence (例文読解・意味識別モード) */}
+      {sentenceText && (
+        <div className="sentence-box">
+          <div className="sentence-text">{sentenceText}</div>
+        </div>
+      )}
 
       {/* Target Word & Grammatical Form */}
       <div className={`phrase-stage ${isFever ? 'phrase-stage-fever' : ''}`}>
@@ -173,7 +210,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         {cards.map((card, idx) => (
           <button
             key={idx}
-            className={`card-btn ${isFever ? 'card-btn-fever' : ''}`}
+            className={`card-btn ${isFever ? 'card-btn-fever' : ''} ${!card.sub ? 'card-btn-label' : ''}`}
             disabled={isLocked}
             onClick={() => onCardSelected(card)}
           >

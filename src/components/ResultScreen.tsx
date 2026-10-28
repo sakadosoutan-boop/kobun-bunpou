@@ -63,12 +63,35 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       score > 0 && score >= profile.suddenDeathBest
         ? '自己最高記録に到達せり'
         : '一撃に散れど、次こそは';
+  } else if (gameMode === 'meaning') {
+    modeHeading = '言霊の真価・記録';
+    modeTitle = `${score} 問正解！`;
+    modeSubtitle = mistakesCount === 0 ? '助動詞の意味を完全に見極めたり' : '意味の判別、さらに磨くべし';
+  } else if (gameMode === 'review') {
+    modeHeading = '怨念回収戦・記録';
+    modeTitle = `${score} 問回収！`;
+    modeSubtitle =
+      profile.reviewQueue.length > 0
+        ? `残りの怨念 ${profile.reviewQueue.length} 件、時を置いて再び現れる`
+        : '怨念は全て回収されたり';
+  } else if (gameMode === 'reading') {
+    modeHeading = '古文の間・記録';
+    modeTitle = `${score} 問正解！`;
+    modeSubtitle = mistakesCount === 0 ? '古典の実文を読み解ききったり' : '名文との対話、さらに深めるべし';
+  } else if (gameMode === 'conjugation') {
+    modeHeading = '型稽古・記録';
+    modeTitle = `${score} 問正解！`;
+    modeSubtitle = mistakesCount === 0 ? '型、乱れなし' : '活用の型、さらに身体に刻むべし';
+  } else if (gameMode === 'bossrush') {
+    modeHeading = '連戦の間・記録';
+    modeTitle = isWin ? '三連戦制覇！' : '連戦終幕';
+    modeSubtitle = isWin ? '回復なき連戦を制したり' : '大増量の妖怪に屈したり';
   }
 
   return (
     <div
       id="result-screen"
-      className="screen"
+      className={`screen ${isWin ? 'result-win' : ''}`}
       style={{
         justifyContent: 'center',
         alignItems: 'center',
@@ -131,6 +154,29 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
                 {score}
               </span>
+            </div>
+          )}
+          {(gameMode === 'meaning' ||
+            gameMode === 'reading' ||
+            gameMode === 'conjugation' ||
+            gameMode === 'review') && (
+            <div className="stat-col">
+              <span className="stat-label">正解数</span>
+              <span className="stat-value" style={{ color: 'var(--gold-light)' }}>
+                {score} / {score + mistakesCount}
+              </span>
+            </div>
+          )}
+          {gameMode === 'review' && (
+            <div className="stat-col">
+              <span className="stat-label">残りの怨念</span>
+              <span className="stat-value">{profile.reviewQueue.length} 件</span>
+            </div>
+          )}
+          {gameMode === 'bossrush' && (
+            <div className="stat-col">
+              <span className="stat-label">討伐幕数</span>
+              <span className="stat-value">{stagesCleared} / 3</span>
             </div>
           )}
           {gameMode === 'daily' && (

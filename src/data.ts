@@ -1,4 +1,4 @@
-import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile } from './types';
+import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile, MeaningProblem, ReadingProblem, ConjugationProblem } from './types';
 import kitsuneImg from './assets/images/yokai_white_kitsune_1792736500578.jpg';
 import tenguImg from './assets/images/yokai_crow_tengu_1792736501436.jpg';
 import lordImg from './assets/images/yokai_phantom_lord_1792736501784.jpg';
@@ -24,6 +24,52 @@ export const VERB_PROBLEMS: VerbProblem[] = [
   { word: "干（ひ）", form: "連用形（上一段）", targetConn: "連用形" },
   { word: "落つ", form: "終止形（上二段）", targetConn: "終止形" },
   { word: "受く", form: "終止形（下二段）", targetConn: "終止形" },
+  { word: "聞か", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "書き", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "読む", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "泣き", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "笑は", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "歌ふ", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "飛び", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "帰ら", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "取る", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "守り", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "通は", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "残る", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "忍ば", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "盗み", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "望む", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "漕ぎ", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "急が", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "結ぶ", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "愛し", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "変はり", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "行き", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "立た", form: "未然形（四段）", targetConn: "未然形" },
+  { word: "飲み", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "防ぐ", form: "終止形（四段）", targetConn: "終止形" },
+  { word: "干し", form: "連用形（四段）", targetConn: "連用形" },
+  { word: "着", form: "連用形（上一段）", targetConn: "連用形" },
+  { word: "似", form: "未然形（上一段）", targetConn: "未然形" },
+  { word: "煮る", form: "終止形（上一段）", targetConn: "終止形" },
+  { word: "射", form: "連用形（上一段）", targetConn: "連用形" },
+  { word: "閉ぢ", form: "連用形（上二段）", targetConn: "連用形" },
+  { word: "恥づ", form: "終止形（上二段）", targetConn: "終止形" },
+  { word: "起く", form: "終止形（上二段）", targetConn: "終止形" },
+  { word: "捨て", form: "連用形（下二段）", targetConn: "連用形" },
+  { word: "助け", form: "未然形（下二段）", targetConn: "未然形" },
+  { word: "経（へ）", form: "未然形（下二段）", targetConn: "未然形" },
+  { word: "植ゑ", form: "連用形（下二段）", targetConn: "連用形" },
+  { word: "恋ひ", form: "連用形（下二段）", targetConn: "連用形" },
+  { word: "忘れ", form: "連用形（下二段）", targetConn: "連用形" },
+  { word: "来（き）", form: "連用形（カ変）", targetConn: "連用形" },
+  { word: "来（く）", form: "終止形（カ変）", targetConn: "終止形" },
+  { word: "為（せ）", form: "未然形（サ変）", targetConn: "未然形" },
+  { word: "為（し）", form: "連用形（サ変）", targetConn: "連用形" },
+  { word: "死な", form: "未然形（ナ変）", targetConn: "未然形" },
+  { word: "往ぬ", form: "終止形（ナ変）", targetConn: "終止形" },
+  { word: "あら", form: "未然形（ラ変）", targetConn: "未然形" },
+  { word: "をり", form: "連用形（ラ変）", targetConn: "連用形" },
 ];
 
 export const AUXILIARY_CARDS: AuxiliaryCard[] = [
@@ -97,6 +143,139 @@ export const KAKARI_PROBLEMS: KakariProblem[] = [
       { text: "行け", sub: "已然形" },
       { text: "行き", sub: "連用形" },
       { text: "行か", sub: "未然形" }
+    ]
+  }
+,
+  {
+    particle: "ぞ",
+    targetForm: "連体形",
+    prompt: "係助詞【ぞ】あり！形容詞「高し」の結びを選べ",
+    correct: { text: "高き", sub: "連体形" },
+    wrongs: [
+      { text: "高けれ", sub: "已然形" },
+      { text: "高く", sub: "連用形" },
+      { text: "高し", sub: "終止形" }
+    ]
+  },
+  {
+    particle: "こそ",
+    targetForm: "已然形",
+    prompt: "係助詞【こそ】あり！形容詞「清し」の結びを選べ",
+    correct: { text: "清けれ", sub: "已然形" },
+    wrongs: [
+      { text: "清き", sub: "連体形" },
+      { text: "清し", sub: "終止形" },
+      { text: "清く", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "なむ",
+    targetForm: "連体形",
+    prompt: "係助詞【なむ】あり！形容動詞「静かなり」の結びを選べ",
+    correct: { text: "静かなる", sub: "連体形" },
+    wrongs: [
+      { text: "静かなれ", sub: "已然形" },
+      { text: "静かなり", sub: "終止形" },
+      { text: "静かに", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "か",
+    targetForm: "連体形",
+    prompt: "係助詞【か】あり！助動詞「べし」の結びを選べ",
+    correct: { text: "べき", sub: "連体形" },
+    wrongs: [
+      { text: "べけれ", sub: "已然形" },
+      { text: "べし", sub: "終止形" },
+      { text: "べく", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "こそ",
+    targetForm: "已然形",
+    prompt: "係助詞【こそ】あり！助動詞「けり」の結びを選べ",
+    correct: { text: "けれ", sub: "已然形" },
+    wrongs: [
+      { text: "ける", sub: "連体形" },
+      { text: "けり", sub: "終止形" },
+      { text: "けら", sub: "未然形" }
+    ]
+  },
+  {
+    particle: "や",
+    targetForm: "連体形",
+    prompt: "係助詞【や】あり！断定の助動詞「なり」の結びを選べ",
+    correct: { text: "なる", sub: "連体形" },
+    wrongs: [
+      { text: "なれ", sub: "已然形" },
+      { text: "なり", sub: "終止形" },
+      { text: "に", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "ぞ",
+    targetForm: "連体形",
+    prompt: "係助詞【ぞ】あり！下二段「受く」の結びを選べ",
+    correct: { text: "受くる", sub: "連体形" },
+    wrongs: [
+      { text: "受くれ", sub: "已然形" },
+      { text: "受く", sub: "終止形" },
+      { text: "受け", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "こそ",
+    targetForm: "已然形",
+    prompt: "係助詞【こそ】あり！上二段「落つ」の結びを選べ",
+    correct: { text: "落つれ", sub: "已然形" },
+    wrongs: [
+      { text: "落つる", sub: "連体形" },
+      { text: "落つ", sub: "終止形" },
+      { text: "落ち", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "か",
+    targetForm: "連体形",
+    prompt: "係助詞【か】あり！ラ変「あり」の結びを選べ",
+    correct: { text: "ある", sub: "連体形" },
+    wrongs: [
+      { text: "あれ", sub: "已然形" },
+      { text: "あり", sub: "終止形" },
+      { text: "あら", sub: "未然形" }
+    ]
+  },
+  {
+    particle: "なむ",
+    targetForm: "連体形",
+    prompt: "係助詞【なむ】あり！下二段「過ぐ」の結びを選べ",
+    correct: { text: "過ぐる", sub: "連体形" },
+    wrongs: [
+      { text: "過ぐれ", sub: "已然形" },
+      { text: "過ぐ", sub: "終止形" },
+      { text: "過ぎ", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "こそ",
+    targetForm: "已然形",
+    prompt: "係助詞【こそ】あり！形容動詞「あはれなり」の結びを選べ",
+    correct: { text: "あはれなれ", sub: "已然形" },
+    wrongs: [
+      { text: "あはれなる", sub: "連体形" },
+      { text: "あはれなり", sub: "終止形" },
+      { text: "あはれに", sub: "連用形" }
+    ]
+  },
+  {
+    particle: "や",
+    targetForm: "連体形",
+    prompt: "係助詞【や】あり！形容詞「遠し」の結びを選べ",
+    correct: { text: "遠き", sub: "連体形" },
+    wrongs: [
+      { text: "遠けれ", sub: "已然形" },
+      { text: "遠し", sub: "終止形" },
+      { text: "遠く", sub: "連用形" }
     ]
   }
 ];
@@ -340,3 +519,445 @@ export const KAKARI_RULES = [
   { particle: "か", musubi: "連体形", meaning: "疑問・反語（文末が連体形になる）" },
   { particle: "こそ", musubi: "已然形", meaning: "強意・逆接（文末が已然形になる）" },
 ];
+
+// ============================================================
+// 意味識別問題（言霊の真価）
+// 短い古文の例文を提示し、文中の助動詞の意味を4択で問う。
+// 例文は著名な古典からの引用、または古典の文体に倣った確実な文。
+// ============================================================
+export const MEANING_PROBLEMS: MeaningProblem[] = [
+  // ── む ──
+  {
+    id: "m01",
+    sentence: "いざ、都へ行かむ。",
+    auxiliary: "む",
+    targetText: "行かむ",
+    correct: "意志（〜よう）",
+    wrongs: ["推量（〜だろう）", "勧誘（〜しようよ）", "婉曲（〜かしら）"],
+    explanation: "主語は話者自身（一人称）なので、「む」は自分の意志を表します。「さあ、都へ行こう」。",
+  },
+  {
+    id: "m02",
+    sentence: "この花、明日は散らむ。",
+    auxiliary: "む",
+    targetText: "散らむ",
+    correct: "推量（〜だろう）",
+    wrongs: ["意志（〜よう）", "勧誘（〜しようよ）", "命令（〜せよ）"],
+    explanation: "主語は「花」という三人称の物なので、「む」は推量。「明日は散るだろう」となります。",
+  },
+  {
+    id: "m03",
+    sentence: "君も、都へ行かむ。",
+    auxiliary: "む",
+    targetText: "行かむ",
+    correct: "勧誘（〜しようよ）",
+    wrongs: ["推量（〜だろう）", "意志（〜よう）", "打消（〜ない）"],
+    explanation: "主語が二人称「君」なので、「む」は相手を誘う勧誘。「あなたも都へ行きましょう」。",
+  },
+  {
+    id: "m04",
+    sentence: "世の中を、何に譬へむ。",
+    auxiliary: "む",
+    targetText: "譬へむ",
+    correct: "婉曲（〜たらよいだろう）",
+    wrongs: ["推量（〜だろう）", "意志（〜よう）", "勧誘（〜しようよ）"],
+    explanation: "疑問の言葉と結びついた「む」は、断定を避ける婉曲の用法。「何に例えたらよいものだろう」。",
+  },
+  {
+    id: "m05",
+    sentence: "友は今頃、都に着きなむ。",
+    auxiliary: "む",
+    targetText: "着きなむ",
+    correct: "推量（〜だろう）",
+    wrongs: ["意志（〜よう）", "完了（〜てしまった）だけ", "命令（〜せよ）"],
+    explanation: "「なむ」は完了の「ぬ」＋推量の「む」。三人称の友のことを「今頃は都に着いているだろう」と推し量っています。",
+  },
+  // ── べし ──
+  {
+    id: "m06",
+    sentence: "明日は雨降るべし。",
+    auxiliary: "べし",
+    targetText: "降るべし",
+    correct: "推量（〜だろう）",
+    wrongs: ["意志（〜つもりだ）", "命令（〜せよ）", "不可能（〜できない）"],
+    explanation: "天気という自分の意志の及ばない事柄なので、「べし」は推量。「明日は雨が降るだろう」。",
+  },
+  {
+    id: "m07",
+    sentence: "必ずや、仇を討つべし。",
+    auxiliary: "べし",
+    targetText: "討つべし",
+    correct: "意志（〜つもりだ）",
+    wrongs: ["推量（〜だろう）", "可能（〜できる）", "伝聞（〜そうだ）"],
+    explanation: "主語は話者自身で、強い決意の文脈なので「べし」は意志。「必ず仇を討つつもりだ」。",
+  },
+  {
+    id: "m08",
+    sentence: "この嶺よりは、都まで見渡すべし。",
+    auxiliary: "べし",
+    targetText: "見渡すべし",
+    correct: "可能（〜できる）",
+    wrongs: ["推量（〜だろう）", "当然（〜べきだ）", "命令（〜せよ）"],
+    explanation: "場所の条件から「見渡すことができる」という可能の意味になります。",
+  },
+  {
+    id: "m09",
+    sentence: "学生は、勉学に励むべし。",
+    auxiliary: "べし",
+    targetText: "励むべし",
+    correct: "当然・義務（〜べきだ）",
+    wrongs: ["推量（〜だろう）", "可能（〜できる）", "意志（〜つもりだ）"],
+    explanation: "立場上なすべきことを示すので、「べし」は当然・義務。「勉学に励むべきだ」。",
+  },
+  {
+    id: "m10",
+    sentence: "汝、明日までにこの文を持て来るべし。",
+    auxiliary: "べし",
+    targetText: "来るべし",
+    correct: "命令（〜せよ）",
+    wrongs: ["推量（〜だろう）", "適当（〜するのがよい）", "打消推量（〜ないだろう）"],
+    explanation: "目下の者への指示の文脈なので、「べし」は命令。「持って来なさい」。",
+  },
+  {
+    id: "m11",
+    sentence: "暑さ厳しき日は、無理に歩くまじ。涼しき蔭に休むべし。",
+    auxiliary: "べし",
+    targetText: "休むべし",
+    correct: "適当（〜するのがよい）",
+    wrongs: ["推量（〜だろう）", "意志（〜つもりだ）", "命令（〜せよ）"],
+    explanation: "助言の文脈で「〜するのがよい」と勧める適当の用法。「涼しい蔭に休むのがよい」。",
+  },
+  // ── る・らる ──
+  {
+    id: "m12",
+    sentence: "猫に、大事の魚を取らる。",
+    auxiliary: "らる",
+    targetText: "取らる",
+    correct: "受身（〜れる）",
+    wrongs: ["尊敬（〜なさる）", "自発（自然と〜される）", "可能（〜できる）"],
+    explanation: "「猫に」という動作主が示され、被害を受ける話なので「らる」は受身。「猫に魚を取られた」。",
+  },
+  {
+    id: "m13",
+    sentence: "帝は、その歌を御覧ぜらる。",
+    auxiliary: "らる",
+    targetText: "御覧ぜらる",
+    correct: "尊敬（〜なさる）",
+    wrongs: ["受身（〜れる）", "自発（自然と〜される）", "使役（〜なさる）"],
+    explanation: "主語が帝という高貴な方なので、「らる」は尊敬。「帝はその歌を御覧になる」。",
+  },
+  {
+    id: "m14",
+    sentence: "都の春の景色、思ひ出でらる。",
+    auxiliary: "らる",
+    targetText: "出でらる",
+    correct: "自発（自然と〜される）",
+    wrongs: ["受身（〜れる）", "尊敬（〜なさる）", "可能（〜できる）"],
+    explanation: "「思ひ出づ」についた「らる」は自発。「（昔見た）都の春の景色が自然と思い出される」。",
+  },
+  {
+    id: "m15",
+    sentence: "静かなる夜は、遠くの鐘の音もよく聞かる。",
+    auxiliary: "る",
+    targetText: "聞かる",
+    correct: "可能（〜できる）",
+    wrongs: ["受身（〜れる）", "尊敬（〜なさる）", "自発（自然と〜される）"],
+    explanation: "四段動詞「聞く」には「る」が接続します。ここでは「よく聞くことができる」という可能の意味です。",
+  },
+  // ── す・さす ──
+  {
+    id: "m16",
+    sentence: "母、子に薬を飲ます。",
+    auxiliary: "す",
+    targetText: "飲ます",
+    correct: "使役（〜せる）",
+    wrongs: ["尊敬（〜なさる）", "受身（〜れる）", "自発（自然と〜される）"],
+    explanation: "「子に」という使役の対象が示されているので、「す」は使役。「母が子に薬を飲ませる」。",
+  },
+  {
+    id: "m17",
+    sentence: "院は、歌を詠ませ給ふ。",
+    auxiliary: "さす",
+    targetText: "詠ませ",
+    correct: "尊敬（〜なさる）",
+    wrongs: ["使役（〜せる）", "受身（〜れる）", "可能（〜できる）"],
+    explanation: "「さす」に尊敬の「給ふ」が続く形は、そのまま主語への尊敬を表します。「院は歌をお詠みになる」。",
+  },
+  // ── なり（伝聞・推定） ──
+  {
+    id: "m18",
+    sentence: "あの山に、名のある滝ありなり。",
+    auxiliary: "なり",
+    targetText: "ありなり",
+    correct: "伝聞（〜だそうだ）",
+    wrongs: ["推定（〜のようだ）", "断定（〜である）", "打消（〜でない）"],
+    explanation: "人から聞いた情報を述べているので、伝聞・推定の「なり」は伝聞。「滝があるそうだ」。",
+  },
+  {
+    id: "m19",
+    sentence: "隣の家にて、子ども泣くなり。",
+    auxiliary: "なり",
+    targetText: "泣くなり",
+    correct: "推定（〜のようだ）",
+    wrongs: ["伝聞（〜だそうだ）", "断定（〜である）", "過去（〜た）"],
+    explanation: "泣き声という音を耳にして判断しているので、「なり」は推定。「子どもが泣いているようだ」。",
+  },
+  // ── まじ ──
+  {
+    id: "m20",
+    sentence: "この雪にては、峠は越えまじ。",
+    auxiliary: "まじ",
+    targetText: "越えまじ",
+    correct: "打消推量（〜ないだろう）",
+    wrongs: ["禁止（〜してはならない）", "打消意志（〜しないつもりだ）", "不可能（〜できない）"],
+    explanation: "天候という意志の及ばない事柄の見通しなので、「まじ」は打消推量。「峠は越えられないだろう」。",
+  },
+  {
+    id: "m21",
+    sentence: "汝、このことを人に語るまじ。",
+    auxiliary: "まじ",
+    targetText: "語るまじ",
+    correct: "禁止（〜してはならない）",
+    wrongs: ["打消推量（〜ないだろう）", "打消意志（〜しないつもりだ）", "不可能（〜できない）"],
+    explanation: "目下の者への指示の文脈なので、「まじ」は禁止。「人に語ってはならない」。",
+  },
+  // ── らむ ──
+  {
+    id: "m22",
+    sentence: "今頃は、故郷にて桜咲くらむ。",
+    auxiliary: "らむ",
+    targetText: "咲くらむ",
+    correct: "現在推量（今頃〜しているだろう）",
+    wrongs: ["過去推量（〜しただろう）", "意志（〜よう）", "伝聞（〜だそうだ）"],
+    explanation: "「今頃は」と、目の前にない現在の様子を推し量るので、「らむ」は現在推量。",
+  },
+  {
+    id: "m23",
+    sentence: "などかくは泣くらむ。",
+    auxiliary: "らむ",
+    targetText: "泣くらむ",
+    correct: "原因推量（なぜ〜のだろう）",
+    wrongs: ["現在推量（今頃〜しているだろう）", "意志（〜よう）", "命令（〜せよ）"],
+    explanation: "「など（なぜ）」という疑問の言葉と結びついた「らむ」は、理由を推し量る原因推量です。",
+  },
+  // ── き・けり ──
+  {
+    id: "m24",
+    sentence: "昔、男ありけり。（伊勢物語）",
+    auxiliary: "けり",
+    targetText: "ありけり",
+    correct: "過去（伝え聞いた過去：〜た）",
+    wrongs: ["詠嘆（〜だなあ）", "推量（〜だろう）", "完了（〜てしまった）"],
+    explanation: "物語の語り出しの「けり」は、伝え聞いた過去を表します。自分が直接体験した過去には「き」を使います。",
+  },
+  {
+    id: "m25",
+    sentence: "山桜、咲きにけり。",
+    auxiliary: "けり",
+    targetText: "咲きにけり",
+    correct: "詠嘆（〜だなあ）",
+    wrongs: ["過去（伝え聞いた過去：〜た）", "推量（〜だろう）", "打消（〜ない）"],
+    explanation: "和歌や感動の場面の「〜にけり」は詠嘆。「山桜が咲いたのだなあ」と、気づきと感動を表します。",
+  },
+  {
+    id: "m26",
+    sentence: "我、昨日その歌を聞きき。",
+    auxiliary: "き",
+    targetText: "聞きき",
+    correct: "直接過去（自分が体験した過去：〜た）",
+    wrongs: ["過去（伝え聞いた過去：〜た）", "詠嘆（〜だなあ）", "完了（〜てしまった）"],
+    explanation: "助動詞「き」は、話者自身が直接体験した過去専用です。「私は昨日その歌を聞いた」。",
+  },
+];
+
+// ============================================================
+// 例文読解問題（古文の間）
+// 著作権の切れた古典の実文の一節を用い、助動詞の意味・係り結び・接続を問う。
+// ============================================================
+export const READING_PROBLEMS: ReadingProblem[] = [
+  {
+    id: "r01",
+    source: "竹取物語",
+    text: "今は昔、竹取の翁といふ者ありけり。",
+    translation: "今となっては昔の話だが、竹取の翁という者がいた。",
+    question: "「ありけり」の助動詞「けり」の意味として正しいものは？",
+    target: "ありけり",
+    correct: "過去（伝え聞いた過去）",
+    wrongs: ["詠嘆（〜だなあ）", "推量（〜だろう）", "完了（〜てしまった）"],
+    explanation: "物語の語り出しの「けり」は、語り手が伝え聞いた過去を表します。",
+  },
+  {
+    id: "r02",
+    source: "枕草子（春はあけぼの）",
+    text: "春はあけぼの。やうやう白くなりゆく山際、少し明かりて、紫だちたる雲の細くたなびきたる。",
+    translation: "春は明け方がよい。だんだん白くなっていく山の稜線が少し明るくなって、紫がかった雲が細くたなびいている（のがよい）。",
+    question: "「たなびきたる」の「たる」が表す意味は？",
+    target: "たなびきたる",
+    correct: "存続（〜ている）",
+    wrongs: ["過去（〜た）", "推量（〜だろう）", "打消（〜ない）"],
+    explanation: "「たる」は存続・完了の助動詞「たり」の連体形。ここでは雲がたなびいている状態の存続を表します。",
+  },
+  {
+    id: "r03",
+    source: "枕草子（夏は夜）",
+    text: "夏は夜。月の頃はさらなり、闇もなほ、螢の多く飛びちがひたる。",
+    translation: "夏は夜がよい。月が出ている頃は言うまでもなく、闇の夜もやはり、螢がたくさん飛び交っている（のがよい）。",
+    question: "「さらなり」の「なり」の意味として正しいものは？",
+    target: "さらなり",
+    correct: "断定（〜である）",
+    wrongs: ["伝聞（〜だそうだ）", "推定（〜のようだ）", "打消（〜でない）"],
+    explanation: "「さらなり」の「なり」は断定の助動詞で、体言（副詞「さら」）に接続しています。伝聞・推定の「なり」は動詞の終止形に接続するので、接続から見分けられます。",
+  },
+  {
+    id: "r04",
+    source: "徒然草（序段）",
+    text: "つれづれなるままに、日暮らし、硯に向かひて、心にうつりゆくよしなしごとを、そこはかとなく書きつくれば、あやしうこそものぐるほしけれ。",
+    translation: "手持ち無沙汰なのにまかせて、一日中硯に向かって、心に浮かんでは消えるたわいもないことを、とりとめもなく書きつけると、不思議と心が乱れるような気がする。",
+    question: "文中の係助詞「こそ」を受けて、文末はどの活用形で結ばれているか？",
+    target: "ものぐるほしけれ",
+    correct: "已然形",
+    wrongs: ["連体形", "終止形", "未然形"],
+    explanation: "係助詞「こそ」の結びは已然形。「ものぐるほしけれ」は形容詞「ものぐるほし」の已然形です。",
+  },
+  {
+    id: "r05",
+    source: "方丈記（冒頭）",
+    text: "ゆく河の流れは絶えずして、しかももとの水にあらず。",
+    translation: "流れゆく河の流れは絶えることがなく、しかも（それは）もとの水ではない。",
+    question: "「あらず」の助動詞「ず」の意味は？",
+    target: "あらず",
+    correct: "打消（〜ない）",
+    wrongs: ["推量（〜だろう）", "完了（〜てしまった）", "尊敬（〜なさる）"],
+    explanation: "「あらず」は「あり」の未然形「あら」＋打消の「ず」。「もとの水ではない」という意味です。",
+  },
+  {
+    id: "r06",
+    source: "方丈記（冒頭）",
+    text: "淀みに浮かぶうたかたは、かつ消えかつ結びて、久しくとどまりたるためしなし。",
+    translation: "淀みに浮かぶ水の泡は、消えたり結んだりして、長くとどまっていた例はない。",
+    question: "「とどまりたる」の「たる」が表す意味は？",
+    target: "とどまりたる",
+    correct: "存続（〜ている）",
+    wrongs: ["推量（〜だろう）", "過去（〜た）", "打消（〜ない）"],
+    explanation: "「たる」は「たり」の連体形で、泡がとどまっている状態の存続を表します。",
+  },
+  {
+    id: "r07",
+    source: "源氏物語（桐壺）",
+    text: "いづれの御時にか、女御、更衣あまたさぶらひたまひけるなかに、いとやむごとなき際ならぬが、すぐれて時めきたまふありけり。",
+    translation: "どの帝の御代であったか、女御や更衣が大勢お仕えしていたなかに、たいして高貴な身分ではないが、格別に帝の寵愛を受けている方がいた。",
+    question: "「さぶらひたまひける」の「ける」は、どの助動詞の活用形か？",
+    target: "たまひける",
+    correct: "過去の助動詞「けり」の連体形",
+    wrongs: ["推量の助動詞「らむ」の連体形", "完了の助動詞「たり」の連体形", "断定の助動詞「なり」の連体形"],
+    explanation: "「ける」は過去の助動詞「けり」の連体形で、体言「なか」にかかっています。",
+  },
+  {
+    id: "r08",
+    source: "奥の細道（冒頭）",
+    text: "月日は百代の過客にして、行きかふ年もまた旅人なり。",
+    translation: "月日は永遠の旅人であり、行き交う年もまた旅人である。",
+    question: "「旅人なり」の「なり」の意味として正しいものは？",
+    target: "旅人なり",
+    correct: "断定（〜である）",
+    wrongs: ["伝聞（〜だそうだ）", "推定（〜のようだ）", "打消（〜でない）"],
+    explanation: "体言「旅人」に接続する「なり」は断定。「旅人である」と言い切っています。",
+  },
+  {
+    id: "r09",
+    source: "平家物語（祇園精舎）",
+    text: "おごれる人も久しからず、ただ春の夜の夢のごとし。",
+    translation: "おごり高ぶる人も（その栄華は）長くは続かず、まるで春の夜の夢のようである。",
+    question: "「久しからず」の「ず」は、形容詞「久し」のどの活用形に接続しているか？",
+    target: "久しからず",
+    correct: "未然形",
+    wrongs: ["連用形", "終止形", "連体形"],
+    explanation: "打消の助動詞「ず」は未然形接続。「久し」の未然形「久しから」に接続しています（「ず」の補助活用は形容詞の未然形に準じます）。",
+  },
+  {
+    id: "r10",
+    source: "枕草子（秋は夕暮れ）",
+    text: "秋は夕暮れ。夕日のさして山の端いと近うなりたるに、烏の寝所へ行くとて、三つ四つ、二つ三つなど飛び急ぐさへあはれなり。",
+    translation: "秋は夕暮れがよい。夕日が差して山の稜線がとても近くなっているところに、烏が寝所へ帰ろうとして、三つ四つ、二つ三つなどと飛び急ぐのまでも、しみじみと趣がある。",
+    question: "文末「あはれなり」の「なり」の意味として正しいものは？",
+    target: "あはれなり",
+    correct: "断定（〜である）",
+    wrongs: ["伝聞（〜だそうだ）", "推定（〜のようだ）", "過去（〜た）"],
+    explanation: "形容動詞の語幹「あはれ」に付く「なり」は断定。「趣がある」と言い切る文末です。",
+  },
+  {
+    id: "r11",
+    source: "枕草子（冬はつとめて）",
+    text: "冬はつとめて。雪の降りたるは、いふべきにもあらず。",
+    translation: "冬は早朝がよい。雪が降っているのは、言うまでもなく（よい）。",
+    question: "「降りたる」の「たる」が表す意味は？",
+    target: "降りたる",
+    correct: "存続（〜ている）",
+    wrongs: ["推量（〜だろう）", "打消（〜ない）", "命令（〜せよ）"],
+    explanation: "「たる」は「たり」の連体形。雪が降っている状態が続いていることを表す存続の用法です。",
+  },
+  {
+    id: "r12",
+    source: "徒然草（花は盛りに）",
+    text: "花は盛りに、月は隈なきをのみ見るものかは。",
+    translation: "花は満開の時だけを、月は曇りのない時だけを見るものだろうか。（いや、そうではない）",
+    question: "文中の係助詞「か」を受けて文が結ばれる時、結びの活用形はどれか？",
+    target: "見るものかは",
+    correct: "連体形",
+    wrongs: ["已然形", "終止形", "未然形"],
+    explanation: "疑問・反語の係助詞「か」の結びは連体形。ここでは体言「もの」が結びの役割を果たしています。「こそ」だけが已然形で結ぶ点と区別しましょう。",
+  },
+];
+
+// ============================================================
+// 活用形トレーニング問題（型稽古）
+// 活用表が確実な動詞だけを収録し、6活用形すべてを出題対象として生成する。
+// 誤答は同じ動詞の他の活用形（表記が異なるもの）から選ぶ。
+// ============================================================
+const CONJUGATION_FORMS = ["未然形", "連用形", "終止形", "連体形", "已然形", "命令形"] as const;
+
+const CONJUGATION_TABLES: { verb: string; className: string; forms: string[] }[] = [
+  { verb: "書く", className: "四段", forms: ["書か", "書き", "書く", "書く", "書け", "書け"] },
+  { verb: "咲く", className: "四段", forms: ["咲か", "咲き", "咲く", "咲く", "咲け", "咲け"] },
+  { verb: "思ふ", className: "四段", forms: ["思は", "思ひ", "思ふ", "思ふ", "思へ", "思へ"] },
+  { verb: "読む", className: "四段", forms: ["読ま", "読み", "読む", "読む", "読め", "読め"] },
+  { verb: "立つ", className: "四段", forms: ["立た", "立ち", "立つ", "立つ", "立て", "立て"] },
+  { verb: "聞く", className: "四段", forms: ["聞か", "聞き", "聞く", "聞く", "聞け", "聞け"] },
+  { verb: "見る", className: "上一段", forms: ["見", "見", "見る", "見る", "見れ", "見よ"] },
+  { verb: "着る", className: "上一段", forms: ["着", "着", "着る", "着る", "着れ", "着よ"] },
+  { verb: "起く", className: "上二段", forms: ["起き", "起き", "起く", "起くる", "起くれ", "起きよ"] },
+  { verb: "落つ", className: "上二段", forms: ["落ち", "落ち", "落つ", "落つる", "落つれ", "落ちよ"] },
+  { verb: "受く", className: "下二段", forms: ["受け", "受け", "受く", "受くる", "受くれ", "受けよ"] },
+  { verb: "過ぐ", className: "下二段", forms: ["過ぎ", "過ぎ", "過ぐ", "過ぐる", "過ぐれ", "過ぎよ"] },
+  { verb: "捨つ", className: "下二段", forms: ["捨て", "捨て", "捨つ", "捨つる", "捨つれ", "捨てよ"] },
+  { verb: "来", className: "カ変", forms: ["こ", "き", "く", "くる", "くれ", "こよ"] },
+  { verb: "す", className: "サ変", forms: ["せ", "し", "す", "する", "すれ", "せよ"] },
+  { verb: "死ぬ", className: "ナ変", forms: ["死な", "死に", "死ぬ", "死ぬる", "死ぬれ", "死ね"] },
+  { verb: "あり", className: "ラ変", forms: ["あら", "あり", "あり", "ある", "あれ", "あれ"] },
+];
+
+function buildConjugationProblems(): ConjugationProblem[] {
+  const problems: ConjugationProblem[] = [];
+  for (const table of CONJUGATION_TABLES) {
+    CONJUGATION_FORMS.forEach((formName, i) => {
+      const correct = table.forms[i];
+      const alternates: string[] = [];
+      for (const f of table.forms) {
+        if (f !== correct && !alternates.includes(f)) alternates.push(f);
+      }
+      if (alternates.length < 3) return;
+      problems.push({
+        id: `conj-${table.verb}-${formName}`,
+        verb: table.verb,
+        className: table.className,
+        targetForm: formName,
+        correct,
+        wrongs: alternates.slice(0, 3),
+        explanation: `「${table.verb}」は${table.className}活用。${table.forms.join("・")}と活用し、${formName}は「${correct}」です。`,
+      });
+    });
+  }
+  return problems;
+}
+
+export const CONJUGATION_PROBLEMS: ConjugationProblem[] = buildConjugationProblems();
