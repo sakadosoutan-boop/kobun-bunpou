@@ -31,7 +31,7 @@ export const keigoMode: ModeDefinition = {
   section: 'field',
   name: '敬語の陣',
   label: '敬語の陣（敬語モード）',
-  description: '含まれる内容：敬語の方向（尊敬／謙譲／丁寧／二重敬語）を見極める問題。全20問',
+  description: `含まれる内容：敬語の方向（尊敬／謙譲／丁寧／二重敬語）を見極める問題。全${KEIGO_PROBLEMS.length}問`,
   icon: '👑',
   buttonClass: 'mode-keigo',
   rules: {
