@@ -1,9 +1,0 @@
-{
-  "name": "言霊文法帖 〜助動詞と係り結びの陣〜",
-  "description": "動詞の活用形を見極め、正しく繋がる「助動詞」を放ち物の怪を浄化する古文文法バトルアクションゲーム。",
-  "prompt": "言霊文法帖 〜助動詞と係り結びの陣〜",
-  "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ],
-  "permissions": []
-}
