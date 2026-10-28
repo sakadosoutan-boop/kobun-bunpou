@@ -13,6 +13,9 @@ import {
   VERB_PROBLEMS,
   AUXILIARY_CARDS,
   KAKARI_PROBLEMS,
+  MEANING_PROBLEMS,
+  READING_PROBLEMS,
+  CONJUGATION_PROBLEMS,
   STAGES,
   generateEndlessStage,
   checkNewTitles,
@@ -27,6 +30,15 @@ import {
   getYesterdayKey,
   pickDailyStageIndex,
 } from './modes/daily';
+import { SessionQuestion, reviewKeyFor, shuffledCopy } from './modes/session';
+import {
+  buildReviewSession,
+  registerReviewMistake,
+  applyReviewCorrect,
+} from './modes/review';
+import { MEANING_SESSION_COUNT } from './modes/meaning';
+import { READING_SESSION_COUNT } from './modes/reading';
+import { CONJUGATION_SESSION_COUNT } from './modes/conjugation';
 import { sound } from './sound';
 import { SakuraCanvas } from './components/SakuraCanvas';
 import { TitleScreen } from './components/TitleScreen';
@@ -98,6 +110,23 @@ export const App: React.FC = () => {
 
   // Sudden-death mode (斬撃一閃): current streak of consecutive correct answers
   const streakRef = useRef(0);
+
+  // Session-queue modes (meaning / review / reading / conjugation):
+  // a fixed list of questions served in order, like the daily queue
+  const [sentenceText, setSentenceText] = useState<string | null>(null);
+  const sessionQueueRef = useRef<SessionQuestion[]>([]);
+  const sessionIndexRef = useRef(0);
+  const sessionCorrectRef = useRef(0);
+  const sessionActiveRef = useRef(false);
+  const reviewFallbackRef = useRef(false);
+  const currentQuizRef = useRef<{
+    reviewKey: string;
+    correctAnswer: string;
+    explanation: string;
+    targetWord: string;
+    targetForm: string;
+    isKakari: boolean;
+  } | null>(null);
 
   // Load saved profile on startup
   useEffect(() => {
@@ -239,6 +268,256 @@ export const App: React.FC = () => {
     setIsLocked(false);
   }, []);
 
+
+  // Build the 4 choices for label-type questions (meaning / reading / conjugation)
+  const buildLabelChoices = (correct: string, wrongs: string[]): ChoiceOption[] =>
+    [
+      { text: correct, sub: '', isCorrect: true },
+      ...wrongs.map((w) => ({ text: w, sub: '', isCorrect: false })),
+    ].sort(() => 0.5 - Math.random());
+
+  // Session-queue turn renderer (meaning / review / reading / conjugation)
+  const setupSessionTurn = useCallback((index: number) => {
+    const question = sessionQueueRef.current[index];
+    if (!question) return;
+    const total = sessionQueueRef.current.length;
+    const progress = `【第 ${index + 1} 問 / 全 ${total} 問】`;
+
+    if (question.kind === 'verb') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      setSentenceText(null);
+      const problem = question.problem;
+      currentProblemRef.current = problem;
+      setGuideText(`${progress} 次の動詞に接続する助動詞を選べ`);
+      setTargetWord(problem.word);
+      setTargetForm(problem.form);
+      const correctExample = AUXILIARY_CARDS.find((c) => c.conn === problem.targetConn);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: `${correctExample?.name || ''}など（${problem.targetConn}接続）`,
+        explanation: `「${problem.word}」は【${problem.form}】です。助動詞は【${problem.targetConn}】接続のものを選びます。`,
+        targetWord: problem.word,
+        targetForm: problem.form,
+        isKakari: false,
+      };
+      setCards(buildVerbChoices(problem));
+    } else if (question.kind === 'kakari') {
+      isFeverRef.current = true;
+      setIsFever(true);
+      sound.playSpecial();
+      setSentenceText(null);
+      const kakari = question.problem;
+      currentKakariRef.current = kakari;
+      currentProblemRef.current = null;
+      setGuideText(`${progress} 係り結びの結びを選べ`);
+      setTargetWord(`【${kakari.particle}】`);
+      setTargetForm('結びの形を選べ');
+      setMessageLog(
+        <span className="log-fever">
+          係助詞「{kakari.particle}」発動！結びは連体形か已然形か？
+        </span>
+      );
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: `${kakari.correct.text}（${kakari.targetForm}）`,
+        explanation: `係助詞「${kakari.particle}」を受ける結びは必ず【${kakari.targetForm}】になります。`,
+        targetWord: `【${kakari.particle}】`,
+        targetForm: '係り結び',
+        isKakari: true,
+      };
+      setCards(buildKakariChoices(kakari));
+    } else if (question.kind === 'meaning') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(problem.sentence);
+      setGuideText(`${progress} 助動詞「${problem.auxiliary}」の意味を選べ`);
+      setTargetWord(problem.targetText);
+      setTargetForm(`「${problem.auxiliary}」の意味は？`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: problem.targetText,
+        targetForm: `意味識別（${problem.auxiliary}）`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else if (question.kind === 'reading') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(problem.text);
+      setGuideText(`${progress} ${problem.question}`);
+      setTargetWord(problem.target);
+      setTargetForm(`出典：${problem.source}`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: problem.correct,
+        explanation: `${problem.explanation}【訳】${problem.translation}`,
+        targetWord: problem.target,
+        targetForm: `${problem.source}・読解`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else {
+      // conjugation
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(null);
+      setGuideText(`${progress} 「${problem.verb}」の${problem.targetForm}を選べ`);
+      setTargetWord(problem.verb);
+      setTargetForm(`${problem.className}活用・${problem.targetForm}`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: `${problem.verb}（${problem.targetForm}）`,
+        targetForm: `${problem.className}活用・${problem.targetForm}`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    }
+    setIsLocked(false);
+  }, []);
+
+  // Answer handling for session-queue modes.
+  // Correct answers in review mode advance the SRS interval; mistakes anywhere
+  // in a session are registered into the persistent review queue.
+  const handleSessionAnswer = (card: ChoiceOption) => {
+    const quiz = currentQuizRef.current;
+    const question = sessionQueueRef.current[sessionIndexRef.current];
+    if (!quiz || !question) return;
+
+    const advance = (delay: number) => {
+      setTimeout(() => {
+        const nextIdx = sessionIndexRef.current + 1;
+        sessionIndexRef.current = nextIdx;
+        if (nextIdx >= sessionQueueRef.current.length) {
+          sound.playFanfare();
+          finishBattleRun(true, sessionCorrectRef.current, 0);
+        } else {
+          setupSessionTurn(nextIdx);
+        }
+      }, delay);
+    };
+
+    if (card.isCorrect) {
+      if (question.kind === 'kakari') {
+        sound.playHeavyStrike();
+      } else {
+        sound.playSlash();
+        sound.playDrum();
+      }
+      const nextCombo = combo + 1;
+      setCombo(nextCombo);
+      if (nextCombo > maxCombo) setMaxCombo(nextCombo);
+      sessionCorrectRef.current += 1;
+      setScore(sessionCorrectRef.current);
+
+      setProfile((prev) => {
+        let updated: PlayerProfile = {
+          ...prev,
+          totalQuestionsAnswered: prev.totalQuestionsAnswered + 1,
+          totalCorrect: prev.totalCorrect + 1,
+        };
+        if (question.kind === 'verb') {
+          updated = {
+            ...updated,
+            cardMastery: {
+              ...prev.cardMastery,
+              [card.text]: (prev.cardMastery[card.text] || 0) + 1,
+            },
+          };
+        }
+        if (gameMode === 'review') {
+          updated = {
+            ...updated,
+            reviewQueue: applyReviewCorrect(prev.reviewQueue, quiz.reviewKey, getDateKey()),
+          };
+        }
+        savePlayerProfile(updated);
+        return updated;
+      });
+
+      setEnemyHp((prev) => Math.max(0, prev - 40));
+      addDamagePopup(question.kind === 'kakari' ? '係り結び成就！' : '正解！', true);
+      setShowSlash(true);
+      setIsHitFlash(true);
+      setTimeout(() => {
+        setShowSlash(false);
+        setIsHitFlash(false);
+      }, 320);
+      setEnemyTransform('scale(0.88) translateY(6px)');
+      setTimeout(() => setEnemyTransform(''), 180);
+
+      if (question.kind === 'verb') {
+        setMessageLog(
+          <span className="log-success">
+            詠進成功！「{question.problem.word}＋{card.text}」
+          </span>
+        );
+      } else if (question.kind === 'kakari') {
+        setMessageLog(
+          <span className="log-fever">
+            係り結び成就！結びは【{question.problem.targetForm}】
+          </span>
+        );
+      } else {
+        setMessageLog(<span className="log-success">正解！{quiz.explanation}</span>);
+      }
+      advance(950);
+    } else {
+      sound.playDamage();
+      setCombo(0);
+      setPlayerHp((prev) => Math.max(1, prev - 20));
+      addDamagePopup('不正解', false, true);
+
+      setMistakes((prev) => [
+        ...prev,
+        {
+          id: String(Date.now()),
+          targetWord: quiz.targetWord,
+          targetForm: quiz.targetForm,
+          chosenText: card.text,
+          chosenConn: card.sub || undefined,
+          correctAnswer: quiz.correctAnswer,
+          explanation: quiz.explanation,
+          isKakari: quiz.isKakari,
+        },
+      ]);
+
+      // SRS: register the missed question into the persistent review queue
+      setProfile((prev) => {
+        const updated = {
+          ...prev,
+          totalQuestionsAnswered: prev.totalQuestionsAnswered + 1,
+          reviewQueue: registerReviewMistake(prev.reviewQueue, quiz.reviewKey, getDateKey()),
+        };
+        savePlayerProfile(updated);
+        return updated;
+      });
+
+      setMessageLog(
+        <span className="log-fail">
+          不正解…正解は「{quiz.correctAnswer}」。{quiz.explanation}
+        </span>
+      );
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 320);
+      advance(1400);
+    }
+  };
+
   // Review Drill turn
   const setupReviewDrillTurn = useCallback(() => {
     if (mistakes.length === 0 || reviewDrillIndex.current >= mistakes.length) {
@@ -306,6 +585,8 @@ export const App: React.FC = () => {
       let earnedExp = 0;
       if (gameMode === 'story') {
         earnedExp = win ? 220 + maxCombo * 10 : stageIndex * 60 + maxCombo * 5;
+      } else if (gameMode === 'bossrush') {
+        earnedExp = win ? 380 + maxCombo * 10 : stageIndex * 80 + maxCombo * 5;
       } else if (gameMode === 'endless') {
         earnedExp = finalWave * 45 + maxCombo * 8;
       } else if (gameMode === 'timeattack') {
@@ -314,6 +595,14 @@ export const App: React.FC = () => {
         earnedExp = 80 + maxCombo * 5;
       } else if (gameMode === 'suddendeath') {
         earnedExp = finalScore * 12 + maxCombo * 4;
+      } else if (gameMode === 'meaning') {
+        earnedExp = finalScore * 10 + maxCombo * 5;
+      } else if (gameMode === 'review') {
+        earnedExp = finalScore * 10 + maxCombo * 5;
+      } else if (gameMode === 'reading') {
+        earnedExp = finalScore * 12 + maxCombo * 5;
+      } else if (gameMode === 'conjugation') {
+        earnedExp = finalScore * 8 + maxCombo * 4;
       }
 
       setExpGained(earnedExp);
@@ -432,7 +721,7 @@ export const App: React.FC = () => {
 
       // Story & Endless Mode HP handling
       if (nextEnemyHp <= 0) {
-        if (gameMode === 'story') {
+        if (gameMode === 'story' || gameMode === 'bossrush') {
           if (currentStageIdx + 1 < STAGES.length) {
             const newIdx = currentStageIdx + 1;
             setStageIndex(newIdx);
@@ -441,8 +730,10 @@ export const App: React.FC = () => {
             setMessageLog(<span className="log-success">妖怪を討滅！次の幕へ進む！</span>);
             setTimeout(() => {
               const nextStage = STAGES[newIdx];
-              setEnemyMaxHp(nextStage.hp);
-              setEnemyHp(nextStage.hp);
+              const stageHp =
+                gameMode === 'bossrush' ? Math.round(nextStage.hp * 1.5) : nextStage.hp;
+              setEnemyMaxHp(stageHp);
+              setEnemyHp(stageHp);
               setupNormalTurn();
             }, 1000);
           } else {
@@ -507,6 +798,9 @@ export const App: React.FC = () => {
     setMaxCombo(0);
     setMistakes([]);
     setIsReviewDrill(false);
+    sessionActiveRef.current = false;
+    reviewFallbackRef.current = false;
+    setSentenceText(null);
     isFeverRef.current = false;
     setIsFever(false);
 
@@ -547,14 +841,60 @@ export const App: React.FC = () => {
       setEnemyMaxHp(9999);
       setEnemyHp(9999);
       setPlayerHp(100);
+    } else if (mode === 'bossrush') {
+      setStageIndex(0);
+      setCurrentStage(STAGES[0]);
+      const hp = Math.round(STAGES[0].hp * 1.5);
+      setEnemyMaxHp(hp);
+      setEnemyHp(hp);
+      setPlayerHp(100);
+    } else if (
+      mode === 'meaning' ||
+      mode === 'review' ||
+      mode === 'reading' ||
+      mode === 'conjugation'
+    ) {
+      sessionActiveRef.current = true;
+      sessionIndexRef.current = 0;
+      sessionCorrectRef.current = 0;
+      setScore(0);
+      setCurrentStage(STAGES[0]);
+      setEnemyMaxHp(9999);
+      setEnemyHp(9999);
+      setPlayerHp(100);
+      if (mode === 'meaning') {
+        sessionQueueRef.current = shuffledCopy(MEANING_PROBLEMS)
+          .slice(0, MEANING_SESSION_COUNT)
+          .map((problem) => ({ kind: 'meaning' as const, problem }));
+      } else if (mode === 'reading') {
+        sessionQueueRef.current = shuffledCopy(READING_PROBLEMS)
+          .slice(0, READING_SESSION_COUNT)
+          .map((problem) => ({ kind: 'reading' as const, problem }));
+      } else if (mode === 'conjugation') {
+        sessionQueueRef.current = shuffledCopy(CONJUGATION_PROBLEMS)
+          .slice(0, CONJUGATION_SESSION_COUNT)
+          .map((problem) => ({ kind: 'conjugation' as const, problem }));
+      } else {
+        const session = buildReviewSession(profile, getDateKey());
+        sessionQueueRef.current = session.questions;
+        reviewFallbackRef.current = session.fallback;
+      }
     }
 
     setMessageLog('言霊を繰り出せ！');
     setScreen('battle');
     if (mode === 'daily') {
       setupDailyTurn(0);
+    } else if (sessionActiveRef.current) {
+      setupSessionTurn(0);
     } else {
       setupNormalTurn();
+    }
+    // 代替出題時は最後に通知を残す（最初の設問表示で上書きされないように）
+    if (mode === 'review' && reviewFallbackRef.current) {
+      setMessageLog(
+        <span className="log-success">回収すべき怨念はなし。通常問題で腕を磨け。</span>
+      );
     }
   };
 
@@ -574,6 +914,12 @@ export const App: React.FC = () => {
   const handleCardClick = (card: ChoiceOption) => {
     if (isLocked) return;
     setIsLocked(true);
+
+    // Session-queue modes (meaning / review / reading / conjugation)
+    if (sessionActiveRef.current) {
+      handleSessionAnswer(card);
+      return;
+    }
 
     // Track total questions answered
     setProfile((prev) => {
@@ -655,6 +1001,20 @@ export const App: React.FC = () => {
             isKakari: true,
           },
         ]);
+
+        // SRS復習キューへ登録（怨念回収戦で再出題される）
+        setProfile((prev) => {
+          const updated = {
+            ...prev,
+            reviewQueue: registerReviewMistake(
+              prev.reviewQueue,
+              `kakari:${kakari.particle}`,
+              getDateKey()
+            ),
+          };
+          savePlayerProfile(updated);
+          return updated;
+        });
 
         setMessageLog(
           <span className="log-fail">
@@ -756,6 +1116,20 @@ export const App: React.FC = () => {
           },
         ]);
 
+        // SRS復習キューへ登録（怨念回収戦で再出題される）
+        setProfile((prev) => {
+          const updated = {
+            ...prev,
+            reviewQueue: registerReviewMistake(
+              prev.reviewQueue,
+              `verb:${problem.word}`,
+              getDateKey()
+            ),
+          };
+          savePlayerProfile(updated);
+          return updated;
+        });
+
         setMessageLog(
           <span className="log-fail">
             接続不備！「{card.text}」は【{card.conn}】接続なり
@@ -790,6 +1164,7 @@ export const App: React.FC = () => {
       {screen === 'battle' && (
         <BattleScreen
           stage={currentStage}
+          sentenceText={sentenceText}
           gameMode={gameMode}
           combo={combo}
           enemyHp={enemyHp}

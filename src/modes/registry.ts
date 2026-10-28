@@ -5,6 +5,11 @@ import { endlessMode } from './endless';
 import { timeAttackMode } from './timeattack';
 import { dailyMode } from './daily';
 import { suddenDeathMode } from './suddendeath';
+import { meaningMode } from './meaning';
+import { reviewMode } from './review';
+import { readingMode } from './reading';
+import { conjugationMode } from './conjugation';
+import { bossRushMode } from './bossrush';
 
 /**
  * モードレジストリ。タイトル画面はこの一覧順でモードボタンを描画する。
@@ -16,6 +21,11 @@ export const MODE_REGISTRY: ModeDefinition[] = [
   timeAttackMode,
   dailyMode,
   suddenDeathMode,
+  meaningMode,
+  reviewMode,
+  readingMode,
+  conjugationMode,
+  bossRushMode,
 ];
 
 export function getModeDefinition(id: GameMode): ModeDefinition {
