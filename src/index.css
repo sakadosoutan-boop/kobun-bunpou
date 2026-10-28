@@ -23,6 +23,7 @@ body {
   overflow: hidden;
   touch-action: manipulation;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -40,6 +41,7 @@ body {
   width: 100%;
   max-width: 480px;
   height: 100vh;
+  height: 100dvh;
   position: relative;
   background-image: linear-gradient(180deg, rgba(8, 11, 18, 0.18) 0%, rgba(8, 11, 18, 0.42) 55%, rgba(8, 11, 18, 0.62) 100%), url('/title-bg.jpg');
   background-size: cover, cover;
@@ -74,6 +76,15 @@ body {
   animation: screen-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
   padding-top: env(safe-area-inset-top, 14px);
   padding-bottom: env(safe-area-inset-bottom, 14px);
+}
+
+.screen > * {
+  flex-shrink: 0;
+}
+
+#title-screen, #battle-screen, #result-screen {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .hidden {
@@ -510,9 +521,9 @@ h1.main-title {
 }
 
 .enemy-portrait-frame {
-  width: 136px;
-  height: 136px;
-  border-radius: 50%;
+  width: 100%;
+  height: 200px;
+  border-radius: 20px;
   position: relative;
   border: 2px solid var(--gold);
   outline: 1px solid rgba(212, 175, 55, 0.4);
@@ -528,6 +539,7 @@ h1.main-title {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 30%;
   display: block;
 }
 
