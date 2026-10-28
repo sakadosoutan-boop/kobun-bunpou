@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlayerProfile } from '../types';
-import { AUXILIARY_CARDS, ALL_TITLES, getPlayerRank } from '../data';
+import { AUXILIARY_CARDS, ALL_TITLES, getHeldRankInfo } from '../data';
 
 interface CompendiumModalProps {
   isOpen: boolean;
@@ -17,7 +17,7 @@ export const CompendiumModal: React.FC<CompendiumModalProps> = ({
 
   if (!isOpen) return null;
 
-  const { currentRank, nextRank, progress } = getPlayerRank(profile.exp);
+  const { currentRank, nextRank, progress } = getHeldRankInfo(profile);
 
   const accuracy = profile.totalQuestionsAnswered > 0
     ? Math.round((profile.totalCorrect / profile.totalQuestionsAnswered) * 100)

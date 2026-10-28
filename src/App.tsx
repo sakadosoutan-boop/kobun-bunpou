@@ -16,9 +16,11 @@ import {
   MEANING_PROBLEMS,
   READING_PROBLEMS,
   CONJUGATION_PROBLEMS,
+  KEIGO_PROBLEMS,
   STAGES,
   generateEndlessStage,
   checkNewTitles,
+  getHeldRankInfo,
 } from './data';
 import { loadPlayerProfile, savePlayerProfile, DEFAULT_PROFILE } from './storage';
 import { getModeDefinition } from './modes/registry';
@@ -39,6 +41,17 @@ import {
 import { MEANING_SESSION_COUNT } from './modes/meaning';
 import { READING_SESSION_COUNT } from './modes/reading';
 import { CONJUGATION_SESSION_COUNT } from './modes/conjugation';
+import {
+  KEIGO_SESSION_COUNT,
+  KEIGO_DIRECTION_CHOICES,
+  keigoDirectionLabel,
+} from './modes/keigo';
+import { EXAM_MISTAKE_LIMIT } from './modes/exam';
+import {
+  bumpMission,
+  ensureWeeklyMissions,
+  MissionMetric,
+} from './modes/missions';
 import { sound } from './sound';
 import { SakuraCanvas } from './components/SakuraCanvas';
 import { TitleScreen } from './components/TitleScreen';
@@ -111,9 +124,20 @@ export const App: React.FC = () => {
   // Sudden-death mode (斬撃一閃): current streak of consecutive correct answers
   const streakRef = useRef(0);
 
+  // 奥義「言霊解放」: ゲージと使用済みフラグ（戦闘ごとにリセット）
+  const [ougiGauge, setOugiGauge] = useState(0);
+  const [ougiUsed, setOugiUsed] = useState(false);
+
+  // 昇進試験のミス回数
+  const examMistakesRef = useRef(0);
+
+  // 週間ミッション達成通知（報酬EXP）の保留キュー
+  const missionNoticesRef = useRef<number[]>([]);
+
   // Session-queue modes (meaning / review / reading / conjugation):
   // a fixed list of questions served in order, like the daily queue
   const [sentenceText, setSentenceText] = useState<string | null>(null);
+  const [sentenceHighlight, setSentenceHighlight] = useState<string | null>(null);
   const sessionQueueRef = useRef<SessionQuestion[]>([]);
   const sessionIndexRef = useRef(0);
   const sessionCorrectRef = useRef(0);
@@ -131,7 +155,59 @@ export const App: React.FC = () => {
   // Load saved profile on startup
   useEffect(() => {
     const loaded = loadPlayerProfile();
-    setProfile(loaded);
+    const ensured = ensureWeeklyMissions(loaded);
+    if (ensured !== loaded) savePlayerProfile(ensured);
+    setProfile(ensured);
+  }, []);
+
+  // 週が変わっていたらタイトル表示時にミッションを作り直す
+  useEffect(() => {
+    if (screen !== 'title') return;
+    setProfile((prev) => {
+      const ensured = ensureWeeklyMissions(prev);
+      if (ensured !== prev) {
+        savePlayerProfile(ensured);
+        return ensured;
+      }
+      return prev;
+    });
+  }, [screen]);
+
+  // 週間ミッション達成の通知（バトル中に浮き出し表示）
+  useEffect(() => {
+    if (screen !== 'battle' || missionNoticesRef.current.length === 0) return;
+    const rewards = missionNoticesRef.current.splice(0);
+    sound.playSpecial();
+    rewards.forEach((r) => addDamagePopup(`週間任務達成！ +${r} 徳`, true));
+  }, [profile, screen]);
+
+  /** プロフィール更新の中で週間ミッション進捗も加算する（達成通知はキューへ） */
+  const applyMissions = (
+    p: PlayerProfile,
+    ...metrics: MissionMetric[]
+  ): PlayerProfile => {
+    let cur = p;
+    for (const metric of metrics) {
+      const res = bumpMission(cur, metric, 1);
+      cur = res.profile;
+      res.completed.forEach((c) => missionNoticesRef.current.push(c.template.reward));
+    }
+    return cur;
+  };
+
+  /** 敵討伐（ステージ撃破）のミッション進捗 */
+  const addEnemyDefeatMission = useCallback(() => {
+    setProfile((prev) => {
+      const updated = applyMissions(prev, 'enemyDefeats');
+      savePlayerProfile(updated);
+      return updated;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** 奥義ゲージを溜める（正解1回で約3分の1） */
+  const chargeOugi = useCallback(() => {
+    setOugiGauge((g) => Math.min(100, g + 34));
   }, []);
 
   const addDamagePopup = (text: string, isCritical: boolean, isPlayerDamage = false) => {
@@ -288,6 +364,7 @@ export const App: React.FC = () => {
       setIsFever(false);
       currentKakariRef.current = null;
       setSentenceText(null);
+      setSentenceHighlight(null);
       const problem = question.problem;
       currentProblemRef.current = problem;
       setGuideText(`${progress} 次の動詞に接続する助動詞を選べ`);
@@ -308,6 +385,7 @@ export const App: React.FC = () => {
       setIsFever(true);
       sound.playSpecial();
       setSentenceText(null);
+      setSentenceHighlight(null);
       const kakari = question.problem;
       currentKakariRef.current = kakari;
       currentProblemRef.current = null;
@@ -335,6 +413,7 @@ export const App: React.FC = () => {
       currentProblemRef.current = null;
       const problem = question.problem;
       setSentenceText(problem.sentence);
+      setSentenceHighlight(null);
       setGuideText(`${progress} 助動詞「${problem.auxiliary}」の意味を選べ`);
       setTargetWord(problem.targetText);
       setTargetForm(`「${problem.auxiliary}」の意味は？`);
@@ -354,6 +433,7 @@ export const App: React.FC = () => {
       currentProblemRef.current = null;
       const problem = question.problem;
       setSentenceText(problem.text);
+      setSentenceHighlight(null);
       setGuideText(`${progress} ${problem.question}`);
       setTargetWord(problem.target);
       setTargetForm(`出典：${problem.source}`);
@@ -366,6 +446,32 @@ export const App: React.FC = () => {
         isKakari: false,
       };
       setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else if (question.kind === 'keigo') {
+      isFeverRef.current = false;
+      setIsFever(false);
+      currentKakariRef.current = null;
+      currentProblemRef.current = null;
+      const problem = question.problem;
+      setSentenceText(problem.sentence);
+      setSentenceHighlight(problem.expression);
+      setGuideText(`${progress} 敬語「${problem.expression}」の敬意の方向を選べ`);
+      setTargetWord(problem.expression);
+      setTargetForm(`出典：${problem.source}｜${problem.relation}`);
+      currentQuizRef.current = {
+        reviewKey: reviewKeyFor(question),
+        correctAnswer: keigoDirectionLabel(problem.direction),
+        explanation: problem.explanation,
+        targetWord: problem.expression,
+        targetForm: `敬語（${problem.source}）`,
+        isKakari: false,
+      };
+      setCards(
+        KEIGO_DIRECTION_CHOICES.map((c) => ({
+          text: c.text,
+          sub: c.sub,
+          isCorrect: c.direction === problem.direction,
+        })).sort(() => 0.5 - Math.random())
+      );
     } else {
       // conjugation
       isFeverRef.current = false;
@@ -374,6 +480,7 @@ export const App: React.FC = () => {
       currentProblemRef.current = null;
       const problem = question.problem;
       setSentenceText(null);
+      setSentenceHighlight(null);
       setGuideText(`${progress} 「${problem.verb}」の${problem.targetForm}を選べ`);
       setTargetWord(problem.verb);
       setTargetForm(`${problem.className}活用・${problem.targetForm}`);
@@ -423,6 +530,7 @@ export const App: React.FC = () => {
       if (nextCombo > maxCombo) setMaxCombo(nextCombo);
       sessionCorrectRef.current += 1;
       setScore(sessionCorrectRef.current);
+      chargeOugi();
 
       setProfile((prev) => {
         let updated: PlayerProfile = {
@@ -445,6 +553,21 @@ export const App: React.FC = () => {
             reviewQueue: applyReviewCorrect(prev.reviewQueue, quiz.reviewKey, getDateKey()),
           };
         }
+        const kindMetric: MissionMetric | null =
+          question.kind === 'meaning'
+            ? 'meaningCorrect'
+            : question.kind === 'reading'
+            ? 'readingCorrect'
+            : question.kind === 'conjugation'
+            ? 'conjugationCorrect'
+            : question.kind === 'keigo'
+            ? 'keigoCorrect'
+            : question.kind === 'kakari'
+            ? 'kakariCorrect'
+            : null;
+        updated = kindMetric
+          ? applyMissions(updated, 'totalCorrect', kindMetric)
+          : applyMissions(updated, 'totalCorrect');
         savePlayerProfile(updated);
         return updated;
       });
@@ -514,6 +637,18 @@ export const App: React.FC = () => {
       );
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 320);
+
+      // 昇進試験: ミスが上限を超えたら不合格で即終了
+      if (gameMode === 'exam') {
+        examMistakesRef.current += 1;
+        if (examMistakesRef.current > EXAM_MISTAKE_LIMIT) {
+          setTimeout(() => {
+            sound.playDamage();
+            finishBattleRun(false, sessionCorrectRef.current, 0);
+          }, 1500);
+          return;
+        }
+      }
       advance(1400);
     }
   };
@@ -603,6 +738,10 @@ export const App: React.FC = () => {
         earnedExp = finalScore * 12 + maxCombo * 5;
       } else if (gameMode === 'conjugation') {
         earnedExp = finalScore * 8 + maxCombo * 4;
+      } else if (gameMode === 'keigo') {
+        earnedExp = finalScore * 10 + maxCombo * 5;
+      } else if (gameMode === 'exam') {
+        earnedExp = win ? 150 + finalScore * 8 : finalScore * 5;
       }
 
       setExpGained(earnedExp);
@@ -620,7 +759,7 @@ export const App: React.FC = () => {
             ? applyDailyCompletion(prev, getDateKey(), getYesterdayKey())
             : null;
 
-        const updated: PlayerProfile = {
+        let updated: PlayerProfile = {
           ...prev,
           exp: nextExp,
           storyClears: nextStoryClears,
@@ -634,6 +773,21 @@ export const App: React.FC = () => {
               }
             : {}),
         };
+
+        // 週間ミッション: 日課完了・ボス討伐の加算
+        if (gameMode === 'daily' && win) {
+          updated = applyMissions(updated, 'dailyComplete');
+        }
+        if ((gameMode === 'story' || gameMode === 'bossrush') && win) {
+          updated = applyMissions(updated, 'enemyDefeats');
+        }
+        // 昇進試験に合格したら保持位階を1つ上げる
+        if (gameMode === 'exam' && win) {
+          const held = getHeldRankInfo(prev);
+          if (held.nextRank) {
+            updated = { ...updated, promotedRank: held.rankIndex + 1 };
+          }
+        }
 
         const unlocked = checkNewTitles(updated, {
           win,
@@ -726,6 +880,7 @@ export const App: React.FC = () => {
             const newIdx = currentStageIdx + 1;
             setStageIndex(newIdx);
             setCurrentStage(STAGES[newIdx]);
+            addEnemyDefeatMission();
             sound.playFanfare();
             setMessageLog(<span className="log-success">妖怪を討滅！次の幕へ進む！</span>);
             setTimeout(() => {
@@ -743,6 +898,7 @@ export const App: React.FC = () => {
         } else if (gameMode === 'endless') {
           const nextWave = currentWave + 1;
           setWave(nextWave);
+          addEnemyDefeatMission();
           sound.playFanfare();
           setMessageLog(<span className="log-success">第 {currentWave} 体を調伏！次なる妖魔が来襲！</span>);
 
@@ -774,6 +930,7 @@ export const App: React.FC = () => {
       }
     },
     [
+      addEnemyDefeatMission,
       finishBattleRun,
       gameMode,
       isReviewDrill,
@@ -801,6 +958,10 @@ export const App: React.FC = () => {
     sessionActiveRef.current = false;
     reviewFallbackRef.current = false;
     setSentenceText(null);
+    setSentenceHighlight(null);
+    setOugiGauge(0);
+    setOugiUsed(false);
+    examMistakesRef.current = 0;
     isFeverRef.current = false;
     setIsFever(false);
 
@@ -852,7 +1013,9 @@ export const App: React.FC = () => {
       mode === 'meaning' ||
       mode === 'review' ||
       mode === 'reading' ||
-      mode === 'conjugation'
+      mode === 'conjugation' ||
+      mode === 'keigo' ||
+      mode === 'exam'
     ) {
       sessionActiveRef.current = true;
       sessionIndexRef.current = 0;
@@ -874,6 +1037,29 @@ export const App: React.FC = () => {
         sessionQueueRef.current = shuffledCopy(CONJUGATION_PROBLEMS)
           .slice(0, CONJUGATION_SESSION_COUNT)
           .map((problem) => ({ kind: 'conjugation' as const, problem }));
+      } else if (mode === 'keigo') {
+        sessionQueueRef.current = shuffledCopy(KEIGO_PROBLEMS)
+          .slice(0, KEIGO_SESSION_COUNT)
+          .map((problem) => ({ kind: 'keigo' as const, problem }));
+      } else if (mode === 'exam') {
+        // 昇進試験: 接続・係り結び・意味・読解・型の混合10問
+        sessionQueueRef.current = shuffledCopy([
+          ...shuffledCopy(VERB_PROBLEMS)
+            .slice(0, 4)
+            .map((problem) => ({ kind: 'verb' as const, problem })),
+          ...shuffledCopy(KAKARI_PROBLEMS)
+            .slice(0, 2)
+            .map((problem) => ({ kind: 'kakari' as const, problem })),
+          ...shuffledCopy(MEANING_PROBLEMS)
+            .slice(0, 2)
+            .map((problem) => ({ kind: 'meaning' as const, problem })),
+          ...shuffledCopy(READING_PROBLEMS)
+            .slice(0, 1)
+            .map((problem) => ({ kind: 'reading' as const, problem })),
+          ...shuffledCopy(CONJUGATION_PROBLEMS)
+            .slice(0, 1)
+            .map((problem) => ({ kind: 'conjugation' as const, problem })),
+        ]);
       } else {
         const session = buildReviewSession(profile, getDateKey());
         sessionQueueRef.current = session.questions;
@@ -906,8 +1092,37 @@ export const App: React.FC = () => {
     setEnemyMaxHp(100);
     setPlayerHp(100);
     setCombo(0);
+    setOugiGauge(0);
+    setOugiUsed(false);
     setScreen('battle');
     setupReviewDrillTurn();
+  };
+
+  // 奥義「言霊解放」: ゲージ満タンで1戦闘に1回だけ発動できる
+  const handleUseOugi = () => {
+    if (ougiUsed || ougiGauge < 100 || isLocked) return;
+
+    // タイムアタックでは「+5秒」に読み替える
+    if (gameMode === 'timeattack') {
+      sound.playSpecial();
+      setOugiUsed(true);
+      setOugiGauge(0);
+      setTimeRemaining((prev) => prev + 5);
+      addDamagePopup('言霊解放！ +5秒', true);
+      setMessageLog(
+        <span className="log-success">奥義・言霊解放！残り時間が5秒延びた！</span>
+      );
+      return;
+    }
+
+    // それ以外のモード: 現在の問題を正解扱いで突破する（正解カードの選択を再現）
+    const correctCard = cards.find((c) => c.isCorrect);
+    if (!correctCard) return;
+    sound.playSpecial();
+    setOugiUsed(true);
+    setOugiGauge(0);
+    addDamagePopup('言霊解放！', true);
+    handleCardClick(correctCard);
   };
 
   // Card selection handler
@@ -935,13 +1150,18 @@ export const App: React.FC = () => {
       const kakari = currentKakariRef.current;
       if (card.isCorrect) {
         sound.playHeavyStrike();
+        chargeOugi();
 
         // Mastery update
         setProfile((prev) => {
-          const updated = {
-            ...prev,
-            totalCorrect: prev.totalCorrect + 1,
-          };
+          const updated = applyMissions(
+            {
+              ...prev,
+              totalCorrect: prev.totalCorrect + 1,
+            },
+            'totalCorrect',
+            'kakariCorrect'
+          );
           savePlayerProfile(updated);
           return updated;
         });
@@ -1042,18 +1262,22 @@ export const App: React.FC = () => {
         if (nextCombo > maxCombo) {
           setMaxCombo(nextCombo);
         }
+        chargeOugi();
 
         // Track mastery for this specific auxiliary card
         setProfile((prev) => {
           const currentCount = prev.cardMastery[card.text] || 0;
-          const updated = {
-            ...prev,
-            totalCorrect: prev.totalCorrect + 1,
-            cardMastery: {
-              ...prev.cardMastery,
-              [card.text]: currentCount + 1,
+          const updated = applyMissions(
+            {
+              ...prev,
+              totalCorrect: prev.totalCorrect + 1,
+              cardMastery: {
+                ...prev.cardMastery,
+                [card.text]: currentCount + 1,
+              },
             },
-          };
+            'totalCorrect'
+          );
           savePlayerProfile(updated);
           return updated;
         });
@@ -1165,6 +1389,10 @@ export const App: React.FC = () => {
         <BattleScreen
           stage={currentStage}
           sentenceText={sentenceText}
+          sentenceHighlight={sentenceHighlight}
+          ougiGauge={ougiGauge}
+          ougiUsed={ougiUsed}
+          onUseOugi={handleUseOugi}
           gameMode={gameMode}
           combo={combo}
           enemyHp={enemyHp}

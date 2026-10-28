@@ -116,6 +116,43 @@ export interface ConjugationProblem {
   explanation: string;
 }
 
+/** 敬意の方向（敬語モードの4択） */
+export type KeigoDirection = 'sonkei' | 'kenjou' | 'teinei' | 'nijuu';
+
+/** 敬語問題（敬語モード）：実文中の敬語表現について「敬意の方向」を問う */
+export interface KeigoProblem {
+  id: string;
+  /** 出典名（例: 源氏物語）。例文の場合は「例文」等と明記する */
+  source: string;
+  /** 提示する古典の文 */
+  sentence: string;
+  /** 問いの対象となる敬語表現（sentence 内に含まれる文字列。ハイライト表示される） */
+  expression: string;
+  /** 人物関係のヒント（例: 語り手 → 帝） */
+  relation: string;
+  /** 正解の敬意の方向 */
+  direction: KeigoDirection;
+  /** 解答後の解説（誰が・誰に対しての敬意か） */
+  explanation: string;
+}
+
+/**
+ * 週間ミッションの状態。
+ * weekKey（その週の月曜の日付キー）が変わると自動で作り直される。
+ */
+export interface WeeklyMissionState {
+  /** 対象週の月曜 'YYYY-MM-DD' */
+  weekKey: string;
+  /** 今週のミッションID（3件） */
+  missionIds: string[];
+  /** ミッションIDごとの目標値 */
+  targets: Record<string, number>;
+  /** ミッションIDごとの進捗 */
+  progress: Record<string, number>;
+  /** 達成済み（報酬付与済み）のミッションID */
+  claimed: string[];
+}
+
 /**
  * SRS復習キューの項目（怨念回収戦）。
  * 誤答した問題を key で識別し、正解を重ねるごとに次回出題間隔が伸びる。
@@ -143,7 +180,9 @@ export type GameMode =
   | 'review'
   | 'reading'
   | 'conjugation'
-  | 'bossrush';
+  | 'bossrush'
+  | 'keigo'
+  | 'exam';
 
 export interface CourtRank {
   title: string;
@@ -175,4 +214,12 @@ export interface PlayerProfile {
   suddenDeathBest: number;
   /** 怨念回収戦（review）のSRS復習キュー */
   reviewQueue: ReviewQueueItem[];
+  /** 週間ミッションの状態 */
+  weeklyMissions: WeeklyMissionState;
+  /**
+   * 昇進試験で実際に保持している位階のインデックス（COURT_RANKS の添字）。
+   * EXPは「受験資格」であり、表示上の位階は試験合格で上がる。
+   * 旧セーブに無い場合は読み込み時にEXPから導出した位階で初期化される。
+   */
+  promotedRank: number;
 }

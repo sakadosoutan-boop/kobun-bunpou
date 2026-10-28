@@ -1,6 +1,96 @@
 import React from 'react';
 import { GameMode, PlayerProfile } from '../types';
-import { getPlayerRank } from '../data';
+import { getHeldRankInfo } from '../data';
+
+/** 戦績カード画像（PNG）をCanvasで描画してダウンロードさせる。外部送信は行わない。 */
+function downloadResultCard(params: {
+  modeHeading: string;
+  modeTitle: string;
+  modeSubtitle: string;
+  rankTitle: string;
+  maxCombo: number;
+  mistakesCount: number;
+  score: number;
+  expGained: number;
+}) {
+  const W = 800;
+  const H = 1000;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#131022');
+  bg.addColorStop(0.55, '#0a0e16');
+  bg.addColorStop(1, '#1a0f14');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(24, 24, W - 48, H - 48);
+  ctx.strokeStyle = 'rgba(212,175,55,0.45)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+
+  const center = (text: string, y: number, font: string, color: string) => {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, W / 2, y);
+  };
+  const serif = '"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif';
+
+  center('言霊文法帖', 150, `900 92px ${serif}`, '#f5d97e');
+  center('〜 助動詞と係り結びの陣 〜', 205, `600 30px ${serif}`, '#d4af37');
+  center(params.modeHeading, 300, `600 28px ${serif}`, '#94a3b8');
+  center(params.modeTitle, 390, `900 64px ${serif}`, '#ffffff');
+  center(params.modeSubtitle, 445, `400 28px ${serif}`, '#cbd5e1');
+
+  ctx.strokeStyle = 'rgba(212,175,55,0.6)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(140, 495);
+  ctx.lineTo(W - 140, 495);
+  ctx.stroke();
+
+  const rows: [string, string][] = [
+    ['朝廷位階', params.rankTitle],
+    ['最大連撃', `${params.maxCombo} 連撃`],
+    ['誤答数', `${params.mistakesCount} 問`],
+    ['獲得した徳（EXP）', `+${params.expGained}`],
+  ];
+  rows.forEach(([label, value], i) => {
+    const y = 580 + i * 78;
+    ctx.font = `600 30px ${serif}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, 150, y);
+    ctx.font = `700 36px ${serif}`;
+    ctx.fillStyle = '#fef08a';
+    ctx.textAlign = 'right';
+    ctx.fillText(value, W - 150, y);
+  });
+
+  const now = new Date();
+  const dateText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+  center(dateText, 920, `400 26px ${serif}`, '#64748b');
+
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
+      now.getDate()
+    ).padStart(2, '0')}`;
+    a.href = url;
+    a.download = `kotodama-result-${ymd}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }, 'image/png');
+}
 
 interface ResultScreenProps {
   isWin: boolean;
@@ -35,7 +125,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   onOpenReview,
   onOpenGrammar,
 }) => {
-  const { currentRank } = getPlayerRank(profile.exp);
+  const { currentRank } = getHeldRankInfo(profile);
 
   let modeHeading = '本編討伐・結末';
   let modeTitle = isWin ? '免許皆伝！' : '気力尽きたり';
@@ -86,6 +176,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     modeHeading = '連戦の間・記録';
     modeTitle = isWin ? '三連戦制覇！' : '連戦終幕';
     modeSubtitle = isWin ? '回復なき連戦を制したり' : '大増量の妖怪に屈したり';
+  } else if (gameMode === 'keigo') {
+    modeHeading = '敬語の陣・記録';
+    modeTitle = `${score} 問正解！`;
+    modeSubtitle = mistakesCount === 0 ? '敬意の方向、寸分も違わず見極めたり' : '敬語の方向感覚、さらに磨くべし';
+  } else if (gameMode === 'exam') {
+    modeHeading = '昇進試験・結果';
+    modeTitle = isWin ? '合格・昇進！' : '不合格';
+    modeSubtitle = isWin
+      ? `新たな位階「${currentRank.title}」に就いた`
+      : '修練は減らない。再挑戦で位階を掴め';
   }
 
   return (
@@ -159,6 +259,8 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           {(gameMode === 'meaning' ||
             gameMode === 'reading' ||
             gameMode === 'conjugation' ||
+            gameMode === 'keigo' ||
+            gameMode === 'exam' ||
             gameMode === 'review') && (
             <div className="stat-col">
               <span className="stat-label">正解数</span>
@@ -244,6 +346,25 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               ✨ 全問正解の記録を確認
             </button>
           )}
+
+          <button
+            className="btn-sub"
+            style={{ borderColor: '#d4af37', color: '#f5d97e', width: '100%' }}
+            onClick={() =>
+              downloadResultCard({
+                modeHeading,
+                modeTitle,
+                modeSubtitle,
+                rankTitle: currentRank.title,
+                maxCombo,
+                mistakesCount,
+                score,
+                expGained,
+              })
+            }
+          >
+            🖼️ 戦績カードを保存（PNG）
+          </button>
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', width: '100%' }}>
             <button

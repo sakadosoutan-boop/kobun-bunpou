@@ -1,6 +1,7 @@
 import {
   ConjugationProblem,
   KakariProblem,
+  KeigoProblem,
   MeaningProblem,
   ReadingProblem,
   VerbProblem,
@@ -16,7 +17,8 @@ export type SessionQuestion =
   | { kind: 'kakari'; problem: KakariProblem }
   | { kind: 'meaning'; problem: MeaningProblem }
   | { kind: 'reading'; problem: ReadingProblem }
-  | { kind: 'conjugation'; problem: ConjugationProblem };
+  | { kind: 'conjugation'; problem: ConjugationProblem }
+  | { kind: 'keigo'; problem: KeigoProblem };
 
 /** 問題をSRS復習キューで識別するキーを返す */
 export function reviewKeyFor(question: SessionQuestion): string {
@@ -31,6 +33,8 @@ export function reviewKeyFor(question: SessionQuestion): string {
       return `reading:${question.problem.id}`;
     case 'conjugation':
       return `conj:${question.problem.verb}:${question.problem.targetForm}`;
+    case 'keigo':
+      return `keigo:${question.problem.id}`;
   }
 }
 

@@ -1,4 +1,5 @@
 import { PlayerProfile } from './types';
+import { getRankIndexByExp } from './data';
 
 const STORAGE_KEY = 'kotodama_bunpou_profile_v1';
 
@@ -15,6 +16,8 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   dailyStreak: 0,
   suddenDeathBest: 0,
   reviewQueue: [],
+  weeklyMissions: { weekKey: '', missionIds: [], targets: {}, progress: {}, claimed: [] },
+  promotedRank: 0,
 };
 
 export function loadPlayerProfile(): PlayerProfile {
@@ -22,7 +25,12 @@ export function loadPlayerProfile(): PlayerProfile {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PROFILE;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_PROFILE, ...parsed };
+    const merged: PlayerProfile = { ...DEFAULT_PROFILE, ...parsed };
+    // 旧セーブ移行: 昇進試験導入前にEXPだけで決まっていた位階を保持位階として引き継ぐ
+    if (typeof parsed.promotedRank !== 'number') {
+      merged.promotedRank = getRankIndexByExp(merged.exp);
+    }
+    return merged;
   } catch (e) {
     console.warn('Failed to load profile from localStorage:', e);
     return DEFAULT_PROFILE;

@@ -6,6 +6,14 @@ interface BattleScreenProps {
   stage: Stage;
   /** 例文読解・意味識別で表示する例文（通常モードでは null） */
   sentenceText?: string | null;
+  /** 文中でハイライトする語句（敬語モードの敬語表現） */
+  sentenceHighlight?: string | null;
+  /** 奥義「言霊解放」のゲージ (0-100) */
+  ougiGauge: number;
+  /** この戦闘で奥義を使い切ったか */
+  ougiUsed: boolean;
+  /** 奥義発動 */
+  onUseOugi: () => void;
   gameMode: GameMode;
   combo: number;
   enemyHp: number;
@@ -34,6 +42,10 @@ interface BattleScreenProps {
 export const BattleScreen: React.FC<BattleScreenProps> = ({
   stage,
   sentenceText,
+  sentenceHighlight,
+  ougiGauge,
+  ougiUsed,
+  onUseOugi,
   gameMode,
   combo,
   enemyHp,
@@ -107,6 +119,16 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
               <span id="stage-label">🥋 型稽古</span>
               <span className="score-badge">正解: <b>{score}</b></span>
             </div>
+          ) : gameMode === 'keigo' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">👑 敬語の陣</span>
+              <span className="score-badge">正解: <b>{score}</b></span>
+            </div>
+          ) : gameMode === 'exam' ? (
+            <div className="time-attack-status">
+              <span id="stage-label">🎓 昇進試験</span>
+              <span className="score-badge">正解: <b>{score}</b></span>
+            </div>
           ) : gameMode === 'bossrush' ? (
             <span id="stage-label">🔥 連戦の間：{stage.label}</span>
           ) : gameMode === 'endless' ? (
@@ -169,7 +191,9 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           gameMode !== 'meaning' &&
           gameMode !== 'review' &&
           gameMode !== 'reading' &&
-          gameMode !== 'conjugation' && (
+          gameMode !== 'conjugation' &&
+          gameMode !== 'keigo' &&
+          gameMode !== 'exam' && (
           <div className="hp-container">
             <div
               id="enemy-hp-bar"
@@ -180,10 +204,23 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         )}
       </div>
 
-      {/* Sentence (例文読解・意味識別モード) */}
+      {/* Sentence (例文読解・意味識別・敬語モード) */}
       {sentenceText && (
         <div className="sentence-box">
-          <div className="sentence-text">{sentenceText}</div>
+          <div className="sentence-text">
+            {sentenceHighlight && sentenceText.includes(sentenceHighlight)
+              ? sentenceText
+                  .split(sentenceHighlight)
+                  .map((part, i, arr) => (
+                    <React.Fragment key={i}>
+                      {part}
+                      {i < arr.length - 1 && (
+                        <span className="keigo-highlight">{sentenceHighlight}</span>
+                      )}
+                    </React.Fragment>
+                  ))
+              : sentenceText}
+          </div>
         </div>
       )}
 
@@ -203,6 +240,33 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
       {/* Message Log */}
       <div className="message-log" id="message-log">
         {messageLog}
+      </div>
+
+      {/* 奥義「言霊解放」 */}
+      <div className="ougi-row">
+        <div className="ougi-gauge-wrap">
+          <span className="ougi-label">奥義</span>
+          <div className="ougi-gauge">
+            <div
+              className={`ougi-gauge-fill ${ougiGauge >= 100 && !ougiUsed ? 'ougi-ready' : ''}`}
+              style={{ width: `${Math.min(100, Math.max(0, ougiGauge))}%` }}
+            />
+          </div>
+        </div>
+        <button
+          className="ougi-btn"
+          disabled={ougiUsed || ougiGauge < 100 || isLocked}
+          onClick={onUseOugi}
+          title={
+            ougiUsed
+              ? 'この戦闘では使用済み'
+              : ougiGauge >= 100
+              ? '言霊解放：この問題を正解として突破する'
+              : '連続正解でゲージが溜まる'
+          }
+        >
+          {ougiUsed ? '言霊解放・使用済' : '✨ 言霊解放'}
+        </button>
       </div>
 
       {/* Auxiliary Verb Card Choices */}

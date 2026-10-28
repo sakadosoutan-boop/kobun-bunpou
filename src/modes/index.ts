@@ -33,3 +33,15 @@ export { meaningMode, MEANING_SESSION_COUNT } from './meaning';
 export { readingMode, READING_SESSION_COUNT } from './reading';
 export { conjugationMode, CONJUGATION_SESSION_COUNT } from './conjugation';
 export { bossRushMode } from './bossrush';
+export { keigoMode, KEIGO_SESSION_COUNT, KEIGO_DIRECTION_CHOICES, keigoDirectionLabel } from './keigo';
+export { examMode, EXAM_QUESTION_COUNT, EXAM_MISTAKE_LIMIT, getExamStatus } from './exam';
+export {
+  MISSION_TEMPLATES,
+  getMissionTemplate,
+  getWeekKey,
+  generateWeeklyMissions,
+  ensureWeeklyMissions,
+  getMissionViews,
+  bumpMission,
+} from './missions';
+export type { MissionMetric, MissionTemplate, MissionView, MissionBumpResult } from './missions';

@@ -1,4 +1,4 @@
-import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile, MeaningProblem, ReadingProblem, ConjugationProblem } from './types';
+import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRank, PlayerProfile, MeaningProblem, ReadingProblem, ConjugationProblem, KeigoProblem } from './types';
 import kitsuneImg from './assets/images/yokai_white_kitsune_1792736500578.jpg';
 import tenguImg from './assets/images/yokai_crow_tengu_1792736501436.jpg';
 import lordImg from './assets/images/yokai_phantom_lord_1792736501784.jpg';
@@ -961,3 +961,242 @@ function buildConjugationProblems(): ConjugationProblem[] {
 }
 
 export const CONJUGATION_PROBLEMS: ConjugationProblem[] = buildConjugationProblems();
+
+/** EXPだけから導かれる位階インデックス（受験資格の判定用） */
+export function getRankIndexByExp(exp: number): number {
+  let idx = 0;
+  for (let i = COURT_RANKS.length - 1; i >= 0; i--) {
+    if (exp >= COURT_RANKS[i].reqExp) {
+      idx = i;
+      break;
+    }
+  }
+  return idx;
+}
+
+/**
+ * 実際に保持している位階（昇進試験で合格した位階）に基づく表示用の位階情報。
+ * - currentRank: 保持位階
+ * - nextRank: 次の位階（最高位なら null）
+ * - progress: 次の位階の受験資格（必要EXP）に対する進捗％
+ * - examAvailable: 次の位階の受験資格を満たし、昇進試験を受けられるか
+ */
+export function getHeldRankInfo(profile: PlayerProfile): {
+  currentRank: CourtRank;
+  nextRank: CourtRank | null;
+  progress: number;
+  examAvailable: boolean;
+  rankIndex: number;
+} {
+  const held =
+    typeof profile.promotedRank === 'number'
+      ? Math.min(Math.max(0, profile.promotedRank), COURT_RANKS.length - 1)
+      : getRankIndexByExp(profile.exp);
+  const currentRank = COURT_RANKS[held];
+  const nextRank = held < COURT_RANKS.length - 1 ? COURT_RANKS[held + 1] : null;
+  let progress = 100;
+  if (nextRank) {
+    const range = nextRank.reqExp - currentRank.reqExp;
+    const gained = profile.exp - currentRank.reqExp;
+    progress = Math.min(100, Math.max(0, Math.round((gained / range) * 100)));
+  }
+  return {
+    currentRank,
+    nextRank,
+    progress,
+    examAvailable: nextRank !== null && profile.exp >= nextRank.reqExp,
+    rankIndex: held,
+  };
+}
+
+// ─────────────────────────────────────────────
+// 敬語問題（敬語モード）: 実文中の敬語表現について「敬意の方向」を問う。
+// 方向の内訳: 尊敬6 / 謙譲6 / 丁寧4 / 二重敬語4。
+// 出典を明記した実文・場面を中心に、文法的に紛れのない例だけを収録する。
+// ─────────────────────────────────────────────
+export const KEIGO_PROBLEMS: KeigoProblem[] = [
+  // ── 尊敬（動作主を高める） ──
+  {
+    id: "k01",
+    source: "枕草子",
+    sentence: "中宮、簾の内より「香炉峰の雪は、いかならむ」とのたまふ。",
+    expression: "のたまふ",
+    relation: "語り手（清少納言）→ 中宮",
+    direction: "sonkei",
+    explanation: "「のたまふ」は「言ふ」の尊敬語。言葉を発する中宮（動作主）を高めているので尊敬です。",
+  },
+  {
+    id: "k02",
+    source: "源氏物語（例文）",
+    sentence: "若宮、御所の庭におはす。",
+    expression: "おはす",
+    relation: "語り手 → 若宮",
+    direction: "sonkei",
+    explanation: "「おはす」は「あり・居る」の尊敬語。そこにいらっしゃる若宮（動作主）を高める尊敬表現です。",
+  },
+  {
+    id: "k03",
+    source: "例文",
+    sentence: "光源氏、御車より降り給ふ。",
+    expression: "降り給ふ",
+    relation: "語り手 → 光源氏",
+    direction: "sonkei",
+    explanation: "助動詞「給ふ（四段）」が、車から降りる源氏（動作主）の動作を高める尊敬表現です。",
+  },
+  {
+    id: "k04",
+    source: "枕草子（例文）",
+    sentence: "殿、笛を遊ばす。",
+    expression: "遊ばす",
+    relation: "語り手 → 殿",
+    direction: "sonkei",
+    explanation: "「遊ばす」は「す（する）」の尊敬語で、現代語の「なさる」に当たります。笛を吹く殿（動作主）を高めています。",
+  },
+  {
+    id: "k05",
+    source: "源氏物語（例文）",
+    sentence: "中宮、絵巻を御覧ず。",
+    expression: "御覧ず",
+    relation: "語り手 → 中宮",
+    direction: "sonkei",
+    explanation: "「御覧ず」は「見る」の尊敬語。絵巻を見る中宮（動作主）を高める尊敬表現です。",
+  },
+  {
+    id: "k06",
+    source: "竹取物語（例文）",
+    sentence: "帝、歌人を召す。",
+    expression: "召す",
+    relation: "語り手 → 帝",
+    direction: "sonkei",
+    explanation: "「召す」は「呼ぶ・招く」の尊敬語。歌人を呼び寄せる帝（動作主）を高めています。",
+  },
+  // ── 謙譲（受け手を高め、動作主がへりくだる） ──
+  {
+    id: "k07",
+    source: "竹取物語",
+    sentence: "天人、かぐや姫に天の羽衣を着せ奉る。",
+    expression: "着せ奉る",
+    relation: "天人 → かぐや姫",
+    direction: "kenjou",
+    explanation: "「奉る」は謙譲語。羽衣を着せる天人がへりくだり、羽衣を受けるかぐや姫（受け手）を高めています。",
+  },
+  {
+    id: "k08",
+    source: "源氏物語（例文）",
+    sentence: "女房、帝に「しかじか」と申す。",
+    expression: "申す",
+    relation: "女房 → 帝",
+    direction: "kenjou",
+    explanation: "「申す」は「言ふ」の謙譲語。言う女房がへりくだり、聞く帝（受け手）を高める謙譲です。",
+  },
+  {
+    id: "k09",
+    source: "徒然草（例文）",
+    sentence: "弟子、上人に大事を聞こゆ。",
+    expression: "聞こゆ",
+    relation: "弟子 → 上人",
+    direction: "kenjou",
+    explanation: "「聞こゆ」は「申し上げる・お聞かせする」の謙譲語。弟子がへりくだって、聞く上人を高めています。",
+  },
+  {
+    id: "k10",
+    source: "例文",
+    sentence: "家臣、御前に候ふ。",
+    expression: "候ふ",
+    relation: "家臣 → 主君",
+    direction: "kenjou",
+    explanation: "「候ふ」は「お仕えする・控える」の謙譲語。主君のそばに仕える家臣自身をへりくだって表します。",
+  },
+  {
+    id: "k11",
+    source: "例文",
+    sentence: "女房、中宮の御所へまゐる。",
+    expression: "まゐる",
+    relation: "女房 → 中宮",
+    direction: "kenjou",
+    explanation: "「まゐる」は「行く・来る」の謙譲語。行く女房がへりくだり、行き先の主である中宮を高めます。",
+  },
+  {
+    id: "k12",
+    source: "枕草子（例文）",
+    sentence: "清少納言、中宮に草子をたてまつる。",
+    expression: "たてまつる",
+    relation: "清少納言 → 中宮",
+    direction: "kenjou",
+    explanation: "「たてまつる（奉る）」は「差し上げる」の謙譲語。渡す清少納言がへりくだり、受ける中宮を高めています。",
+  },
+  // ── 丁寧（聞き手・読み手への丁寧さ） ──
+  {
+    id: "k13",
+    source: "源氏物語（例文）",
+    sentence: "女房、「その儀は、しかではべり」。",
+    expression: "はべり",
+    relation: "女房 → 帝（聞き手）",
+    direction: "teinei",
+    explanation: "「はべり」は「ございます」に当たる丁寧語。動作主や受け手を高めるのではなく、聞き手の帝への丁寧さを表します。",
+  },
+  {
+    id: "k14",
+    source: "枕草子（例文）",
+    sentence: "清少納言、「雪の山、しかではべり」と答ふ。",
+    expression: "はべり",
+    relation: "清少納言 → 中宮（聞き手）",
+    direction: "teinei",
+    explanation: "返答の文末にある「はべり」は丁寧語です。聞き手の中宮へ文を丁寧に差し出す働きをしています。",
+  },
+  {
+    id: "k15",
+    source: "大鏡（例文）",
+    sentence: "語り手の翁、「そのころのことは、よう覚えてはべり」。",
+    expression: "はべり",
+    relation: "語り手 → 読者・聞き手",
+    direction: "teinei",
+    explanation: "語り手が聞き手（読者）に向けて「はべり」で丁寧に語っています。特定の動作主を高める尊敬ではありません。",
+  },
+  {
+    id: "k16",
+    source: "例文",
+    sentence: "従者、「御車の用意は、できてはべり」と告ぐ。",
+    expression: "はべり",
+    relation: "従者 → 主人（聞き手）",
+    direction: "teinei",
+    explanation: "「はべり」は聞き手への丁寧語で、文を丁寧に締めくくります。「用意する」という動作自体を高めているわけではありません。",
+  },
+  // ── 二重敬語（最高位への最大の敬意） ──
+  {
+    id: "k17",
+    source: "源氏物語",
+    sentence: "帝、このことを聞こし召す。",
+    expression: "聞こし召す",
+    relation: "語り手 → 帝",
+    direction: "nijuu",
+    explanation: "「聞こし召す」は尊敬語「聞こす」に、さらに尊敬の「召す」が重なった二重敬語。最高位の帝への最大の敬意です。",
+  },
+  {
+    id: "k18",
+    source: "源氏物語・桐壺",
+    sentence: "帝、更衣の御局へ渡らせ給ふ。",
+    expression: "渡らせ給ふ",
+    relation: "語り手 → 帝",
+    direction: "nijuu",
+    explanation: "「渡る」に尊敬の助動詞「す（せ）」と「給ふ」が二つ重なった二重敬語。帝への最大の敬意を表します。",
+  },
+  {
+    id: "k19",
+    source: "枕草子（例文）",
+    sentence: "中宮、女房に仰せらる。",
+    expression: "仰せらる",
+    relation: "語り手 → 中宮",
+    direction: "nijuu",
+    explanation: "「仰せらる」は「言ふ」の尊敬語「仰す」に尊敬の助動詞「らる」が付いた二重敬語。最高位の中宮への最大の敬意です。",
+  },
+  {
+    id: "k20",
+    source: "竹取物語（例文）",
+    sentence: "帝、かぐや姫の噂を聞こしめす。",
+    expression: "聞こしめす",
+    relation: "語り手 → 帝",
+    direction: "nijuu",
+    explanation: "「聞こしめす」は尊敬語「聞こす」に尊敬の「めす」が重なった二重敬語で、「聞こし召す」と同じく帝への最大の敬意です。",
+  },
+];

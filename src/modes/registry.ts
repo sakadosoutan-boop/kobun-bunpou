@@ -10,6 +10,8 @@ import { reviewMode } from './review';
 import { readingMode } from './reading';
 import { conjugationMode } from './conjugation';
 import { bossRushMode } from './bossrush';
+import { keigoMode } from './keigo';
+import { examMode } from './exam';
 
 /**
  * モードレジストリ。タイトル画面はこの一覧順でモードボタンを描画する。
@@ -26,6 +28,8 @@ export const MODE_REGISTRY: ModeDefinition[] = [
   readingMode,
   conjugationMode,
   bossRushMode,
+  keigoMode,
+  examMode,
 ];
 
 export function getModeDefinition(id: GameMode): ModeDefinition {

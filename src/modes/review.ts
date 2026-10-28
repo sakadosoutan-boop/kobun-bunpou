@@ -1,6 +1,6 @@
 import { ModeDefinition } from './types';
 import { PlayerProfile, ReviewQueueItem } from '../types';
-import { CONJUGATION_PROBLEMS, KAKARI_PROBLEMS, MEANING_PROBLEMS, READING_PROBLEMS, VERB_PROBLEMS } from '../data';
+import { CONJUGATION_PROBLEMS, KAKARI_PROBLEMS, KEIGO_PROBLEMS, MEANING_PROBLEMS, READING_PROBLEMS, VERB_PROBLEMS } from '../data';
 import { SessionQuestion, shuffledCopy } from './session';
 import { getDateKey } from './daily';
 
@@ -97,6 +97,10 @@ export function resolveReviewQuestion(key: string): SessionQuestion | null {
         (p) => p.verb === a && p.targetForm === b
       );
       return problem ? { kind: 'conjugation', problem } : null;
+    }
+    case 'keigo': {
+      const problem = KEIGO_PROBLEMS.find((p) => p.id === a);
+      return problem ? { kind: 'keigo', problem } : null;
     }
     default:
       return null;
