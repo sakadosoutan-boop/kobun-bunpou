@@ -94,7 +94,8 @@ body {
 }
 
 #battle-screen {
-  overflow-y: auto;
+  /* 第9弾・第3段階: 戦闘画面はスクロールさせず 100dvh 内に収める（詳細は末尾の第9弾セクション） */
+  overflow: hidden;
 }
 
 @keyframes screen-in {
@@ -1982,3 +1983,472 @@ h1.main-title {
   font-size: 0.88rem;
   font-weight: bold;
 }
+
+/* 第9弾・第1段階: 主人公（言霊使い）アイコン。新規クラスのみ、既存クラスは変更しない */
+.player-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hero-battle-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 1.5px solid rgba(212, 175, 55, 0.75);
+  flex-shrink: 0;
+  display: block;
+  background: #000;
+}
+
+.title-hero-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 2px solid var(--gold);
+  display: block;
+  margin: 0 auto 8px;
+  background: #000;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.35);
+}
+
+.result-hero-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 2px solid var(--gold);
+  display: block;
+  margin: 6px auto 8px;
+  background: #000;
+}
+
+/* ============================================================
+   第9弾・第3段階: 戦闘画面のスマホ1画面化／HP表示改善／UI全体の洗練
+   - #battle-screen は 100dvh の flex カラム。ルートは overflow:hidden で
+     スクロールしない。余分な高さは 例文ボックス と メッセージログ が
+     縮んで吸収し（min-height:0 + 各ボックス内だけの overflow）、
+     長い解説でも画面全体ははみ出さない。
+   - 敵ポートレートは dvh 連動の横バナー（110〜150px 目安、短画面では縮小）。
+   - 選択肢は 2×2 のコンパクトカード。ダメージ演出は既存の
+     .battle-effects-layer（absolute）内のみでレイアウトに影響しない。
+   ============================================================ */
+
+/* ---- 戦闘ルート ---- */
+#battle-screen {
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 10px calc(env(safe-area-inset-bottom, 0px) + 6px);
+  gap: 5px;
+  justify-content: flex-start;
+}
+
+/* ---- ヘッダー（圧縮） ---- */
+#battle-screen .header-bar {
+  padding: 4px 8px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  flex-wrap: nowrap;
+}
+#battle-screen .header-stage-info,
+#battle-screen .time-attack-status {
+  gap: 6px;
+  min-width: 0;
+}
+#battle-screen #stage-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- 敵エリア: バナー＋名前/弱点の横並び＋HP数値行 ---- */
+#battle-screen .enemy-area {
+  margin: 0;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+#battle-screen .enemy-portrait-frame {
+  flex: 1 1 auto;
+  flex-basis: clamp(96px, 17dvh, 148px);
+  height: auto;
+  min-height: 86px;
+  max-height: 238px;
+  border-radius: 14px;
+  outline-offset: 3px;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.28), 0 0 26px rgba(166, 28, 46, 0.32), inset 0 0 14px rgba(0, 0, 0, 0.55);
+}
+#battle-screen .enemy-portrait-img {
+  object-position: center 26%;
+}
+.enemy-meta-row, .enemy-hp-row {
+  flex-shrink: 0;
+}
+.enemy-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  min-height: 21px;
+  width: 100%;
+}
+#battle-screen .enemy-name {
+  margin-top: 0;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+#battle-screen .weakness-chip {
+  margin-top: 0;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+/* ---- HP行（敵・プレイヤー共通の数値表示） ---- */
+.hp-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+.enemy-hp-row {
+  margin-top: 3px;
+  padding: 0 2px;
+}
+.hp-row-label {
+  font-size: 0.68rem;
+  font-weight: bold;
+  color: #fca5a5;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.hp-numeric {
+  font-size: 0.8rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+.enemy-hp-numeric { color: #fecdd3; }
+#battle-screen .enemy-hp-container {
+  flex: 1;
+  width: auto;
+  height: 12px;
+  margin-top: 0;
+}
+.player-hp-numeric { color: #a7f3d0; font-size: 0.92rem; }
+.player-tier-mid .player-hp-numeric { color: #fde68a; }
+.player-tier-low .player-hp-numeric { color: #fca5a5; }
+
+/* HPバーの段階色: 緑 → 黄（中残量） → 赤（危険・既存 hp-danger） */
+.hp-warning {
+  background: linear-gradient(90deg, #f59e0b, #d97706) !important;
+}
+
+/* ---- 例文ボックス: 残り高さを吸収する可変領域 ---- */
+#battle-screen .sentence-box {
+  margin: 0 1px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+#battle-screen .sentence-text {
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+/* ---- 設問ステージ（圧縮） ---- */
+#battle-screen .phrase-stage {
+  padding: 7px 8px 6px;
+  border-radius: 12px;
+}
+#battle-screen .phrase-guide {
+  font-size: 0.72rem;
+  margin-bottom: 0;
+  line-height: 1.35;
+}
+#battle-screen .current-word {
+  font-size: clamp(1.42rem, 4.4dvh, 1.95rem);
+  line-height: 1.18;
+  letter-spacing: 0.1em;
+}
+#battle-screen .current-form {
+  margin-top: 3px;
+  padding: 1px 10px;
+  font-size: 0.74rem;
+}
+
+/* ---- メッセージログ: 残り高さを吸収。フィードバック時はシート風に強調し、
+        長い解説はこのボックス内でのみスクロールして画面をはみ出させない ---- */
+#battle-screen .message-log {
+  flex: 1 1 auto;
+  flex-shrink: 1;
+  min-height: 26px;
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  margin: 0;
+  padding: 5px 9px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  width: 100%;
+}
+#battle-screen .message-log-feedback {
+  background: rgba(6, 8, 14, 0.88);
+  border-color: rgba(212, 175, 55, 0.65);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(212, 175, 55, 0.08);
+  animation: feedback-sheet-in 0.22s ease-out both;
+}
+@keyframes feedback-sheet-in {
+  from { opacity: 0.4; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 奥義ゲージ行（圧縮） ---- */
+#battle-screen .ougi-row {
+  margin: 0 2px;
+  gap: 7px;
+}
+#battle-screen .ougi-gauge { height: 8px; }
+#battle-screen .ougi-btn {
+  padding: 5px 10px;
+  font-size: 0.74rem;
+}
+
+/* ---- 選択肢: 2×2 コンパクトカード ---- */
+#battle-screen .cards-grid {
+  gap: 6px;
+  margin-bottom: 0;
+}
+#battle-screen .card-btn {
+  min-height: clamp(52px, 8.6dvh, 72px);
+  padding: 6px 5px;
+  border-radius: 11px;
+}
+#battle-screen .card-main {
+  font-size: clamp(1.18rem, 3.8dvh, 1.5rem);
+  line-height: 1.2;
+  margin-bottom: 1px;
+}
+#battle-screen .card-btn-label .card-main {
+  font-size: clamp(0.8rem, 2.5dvh, 0.98rem);
+  line-height: 1.4;
+}
+#battle-screen .card-sub {
+  font-size: 0.66rem;
+  line-height: 1.25;
+}
+
+/* ---- プレイヤーHP: 拡大バー＋数値＋被弾/回復フィードバック ---- */
+#battle-screen .player-status {
+  padding: 5px 10px;
+  gap: 8px;
+  min-height: 46px;
+  border-radius: 11px;
+  transition: border-color 0.3s ease;
+}
+#battle-screen .player-hp-container {
+  flex: 1;
+  width: auto;
+  height: 16px;
+  margin-top: 0;
+  border-radius: 9px;
+}
+#battle-screen .player-status .player-status-label {
+  font-size: 0.78rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.player-tier-mid {
+  border-color: rgba(245, 158, 11, 0.65) !important;
+}
+.player-tier-low {
+  border-color: rgba(239, 68, 68, 0.75) !important;
+}
+.player-status-hit {
+  animation: player-hit-flash 0.6s ease-out both;
+}
+@keyframes player-hit-flash {
+  0% { background: rgba(166, 28, 46, 0.55); transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { background: rgba(166, 28, 46, 0.3); transform: translateX(-2px); }
+  100% { background: rgba(0, 0, 0, 0.6); transform: translateX(0); }
+}
+.player-status-heal {
+  animation: player-heal-flash 0.6s ease-out both;
+}
+@keyframes player-heal-flash {
+  0% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  35% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.75); background: rgba(6, 60, 42, 0.55); }
+  100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ---- 短い画面（375×667 等）ではさらに圧縮する ---- */
+@media (max-height: 720px) {
+  #battle-screen { gap: 4px; }
+  #battle-screen .enemy-portrait-frame { flex-basis: clamp(80px, 14.5dvh, 102px); min-height: 76px; max-height: 180px; }
+  #battle-screen .message-log { max-height: 132px; }
+  .enemy-meta-row { margin-top: 3px; min-height: 19px; }
+  #battle-screen .enemy-name { font-size: 0.92rem; }
+  #battle-screen .hero-battle-icon { width: 30px; height: 30px; }
+  #battle-screen .player-status { min-height: 40px; padding: 4px 9px; }
+  #battle-screen .player-hp-container { height: 14px; }
+  #battle-screen .card-btn { min-height: clamp(48px, 8.2dvh, 58px); }
+  #battle-screen .phrase-stage { padding: 5px 8px 5px; }
+  #battle-screen .sentence-text { font-size: 0.82rem; line-height: 1.45; }
+  #battle-screen .sentence-box { padding: 6px 9px; }
+  #battle-screen .message-log { font-size: 0.8rem; }
+  #battle-screen .icon-btn { padding: 3px 6px; }
+}
+
+/* デスクトップ等の大画面では間延びさせない */
+@media (min-height: 900px) {
+  #battle-screen .enemy-portrait-frame { flex-basis: 152px; max-height: 264px; }
+  #battle-screen .card-btn { min-height: 74px; }
+}
+
+/* ============================================================
+   UI全体の洗練（タイトル／モード選択／ストーリー／結果／モーダル）
+   和風の世界観・既存クラス構造は維持し、タイポグラフィ階層・
+   余白リズム・枠/影/hover/active の質感を底上げする上書き層。
+   ============================================================ */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 2px;
+}
+
+/* タイトル画面 */
+#title-screen {
+  padding: calc(env(safe-area-inset-top, 12px) + 8px) 14px calc(env(safe-area-inset-bottom, 12px) + 12px);
+  gap: 2px;
+}
+#title-screen .title-banner {
+  padding: 16px 12px 13px;
+  border-radius: 16px;
+  margin-bottom: 2px;
+}
+#title-screen .title-hero-img {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+}
+#title-screen h1.main-title {
+  font-size: clamp(2.05rem, 9.5vw, 2.5rem);
+  line-height: 1.15;
+}
+#title-screen .subtitle {
+  font-size: 0.8rem;
+  letter-spacing: 0.32em;
+}
+#title-screen .title-desc {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+.mode-selection-container { gap: 7px; margin: 4px 0; }
+.mode-select-label { font-size: 0.74rem; letter-spacing: 0.22em; color: #d8c98a; }
+.mode-section-heading {
+  font-size: 0.88rem;
+  margin-top: 7px;
+  padding: 3px 0 3px 8px;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.14), transparent 70%);
+  border-radius: 0 6px 6px 0;
+}
+.mode-section-note { font-size: 0.7rem; line-height: 1.4; }
+.mode-btn {
+  padding: 10px 11px;
+  min-height: 56px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 3px 0 0 rgba(212, 175, 55, 0.35);
+}
+.mode-icon { font-size: 1.45rem; margin-right: 10px; }
+.mode-name { font-size: 0.92rem; letter-spacing: 0.04em; }
+.mode-sub { font-size: 0.7rem; color: #b6c2d2; }
+.rule-btn {
+  padding: 7px 4px;
+  border-radius: 9px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+}
+.rule-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--gold);
+}
+.mission-panel { padding: 9px 11px; margin-top: 6px; border-radius: 11px; }
+.btn-main {
+  padding: 11px 34px;
+  font-size: 1.08rem;
+  box-shadow: 0 6px 18px rgba(166, 28, 46, 0.55), 0 0 12px rgba(212, 175, 55, 0.32);
+}
+.btn-main:hover { box-shadow: 0 8px 22px rgba(166, 28, 46, 0.65), 0 0 16px rgba(212, 175, 55, 0.45); }
+.btn-sub {
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.btn-sub:hover { transform: translateY(-1px); }
+.player-rank-chip, .audio-toggle-btn, .exam-available-badge {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* ストーリー画面 */
+.story-screen { gap: 8px; padding: 10px 12px calc(env(safe-area-inset-bottom, 12px) + 10px); }
+.story-portrait-frame {
+  height: min(40vh, 340px);
+  min-height: 200px;
+  border-radius: 16px;
+  outline-offset: 3px;
+}
+.story-textbox { padding: 10px 12px 6px; border-radius: 12px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55); }
+.story-speaker { font-size: 0.82rem; margin-bottom: 3px; }
+.story-text { font-size: 0.94rem; line-height: 1.6; min-height: 3em; }
+.story-skip-btn, .story-auto-btn { padding: 6px 12px; border-radius: 12px; transition: background 0.15s, transform 0.1s; }
+.story-skip-btn:active, .story-auto-btn:active { transform: scale(0.95); }
+.story-archive-item { transition: border-color 0.15s, transform 0.1s; }
+.story-archive-item:hover { border-color: var(--gold); }
+
+/* 結果画面 */
+#result-screen .title-banner { padding: 16px 12px 13px; border-radius: 16px; }
+#result-screen .result-hero-img { width: 54px; height: 54px; margin: 4px auto 6px; }
+.result-exp-card { margin: 8px 0; padding: 7px 10px; border-radius: 9px; font-size: 0.8rem; }
+.result-stats-box { padding: 7px 6px; margin-bottom: 10px; border-radius: 9px; }
+.stat-value { font-size: 1.05rem; }
+.result-actions-list { gap: 7px; }
+
+/* モーダル共通 */
+.modal-overlay {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  padding: 12px;
+}
+.modal-box {
+  background: linear-gradient(170deg, #171e2e 0%, #10141f 100%);
+  border-radius: 16px;
+  padding: 15px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.modal-header { padding-bottom: 8px; margin-bottom: 9px; }
+.modal-header h2 { letter-spacing: 0.08em; font-size: 1.05rem; }
+.close-x-btn { border-radius: 8px; transition: background 0.15s, color 0.15s; }
+.close-x-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.grammar-tab-btn { transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.grammar-tab-btn:hover { border-color: rgba(212, 175, 55, 0.7); color: #e2e8f0; }
+.grammar-entry-card, .kakari-rule-card, .mastery-card, .title-badge-card, .record-stat-row, .mistake-card {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+.icon-btn:active { transform: scale(0.93); }
+.ougi-btn:not(:disabled):hover { filter: brightness(1.2); }

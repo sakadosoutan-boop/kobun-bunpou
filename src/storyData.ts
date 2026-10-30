@@ -14,10 +14,13 @@ import kappaImg from './assets/images/zako_kappa.jpg';
 import zashikiImg from './assets/images/zako_zashiki.jpg';
 import kodanukiImg from './assets/images/zako_kodanuki.jpg';
 import tsuchigumoImg from './assets/images/zako_tsuchigumo.jpg';
+import heroImg from './assets/images/hero_kotodama.jpg';
+
+export const HERO_IMAGE = heroImg;
 
 export interface StoryPanel {
   speaker: string;        // 表示名。ナレーションは 'ナレーション'
-  image: string | null;   // 話者のポートレート画像（importした変数）。ナレーション/主人公は null 可
+  image: string | null;   // 話者のポートレート画像（importした変数）。ナレーションは null、主人公「言霊使い」は heroImg
   text: string;
 }
 
@@ -39,7 +42,7 @@ export const PROLOGUE_PANELS: StoryPanel[] = [
   },
   {
     speaker: '言霊使い',
-    image: null,
+    image: heroImg,
     text: '大丈夫。文法は裏切らない。正しい言葉で、みんな祓ってみせる！',
   },
   {
@@ -49,7 +52,7 @@ export const PROLOGUE_PANELS: StoryPanel[] = [
   },
   {
     speaker: '言霊使い',
-    image: null,
+    image: heroImg,
     text: 'まずは第一幕、妖狐の社から。行くぞ、言霊文法帖――開帖！',
   },
 ];
@@ -62,7 +65,7 @@ export const ENDING_PANELS: StoryPanel[] = [
   },
   {
     speaker: '言霊使い',
-    image: null,
+    image: heroImg,
     text: '終わった……。文法帖の最後のページ、ちゃんと閉じられたかな。',
   },
   {
@@ -72,7 +75,7 @@ export const ENDING_PANELS: StoryPanel[] = [
   },
   {
     speaker: '言霊使い',
-    image: null,
+    image: heroImg,
     text: 'さあ、今日も一問。言霊文法帖――開帖！',
   },
 ];
@@ -101,7 +104,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '白狐！ 言葉の乱れを元に戻しに来た。',
       },
       {
@@ -111,7 +114,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '「ず」は未然形に付く。「書かず」「見ず」――惑わされはしない！',
       },
     ],
@@ -123,7 +126,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '社の結界は解けた。次は深山の烏天狗だ。',
       },
       {
@@ -154,7 +157,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '烏天狗！ その暴風、今日で止める。',
       },
       {
@@ -164,7 +167,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '「こそ」は已然形で結ぶ！ 「ぞ・なむ・や・か」は連体形――基本中の基本だ！',
       },
     ],
@@ -176,7 +179,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '深山に静けさが戻った。次は雪原――ずいぶん寒くなりそうだ。',
       },
       {
@@ -207,7 +210,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '雪女か。冷気で言葉まで凍らせる気だね。',
       },
       {
@@ -217,7 +220,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '「は」は主題を提示する係助詞、「が」は主格を示す格助詞。凍らせるなら、その惑わせ文句の方だ！',
       },
     ],
@@ -229,7 +232,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '吹雪が晴れてきた。雪女の心も、少しは溶けたかな。',
       },
       {
@@ -260,7 +263,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '絡新婦。旅人を絡め取る糸、今夜でほどく。',
       },
       {
@@ -270,7 +273,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '古文の「あはれ」は「しみじみと趣深い」。現代の「哀れ」とは違う――その手には乗らない！',
       },
     ],
@@ -282,7 +285,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '館の糸はほどけた。次は雷鳴の峰だ。',
       },
       {
@@ -313,7 +316,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '雷獣！ 活用の乱れは国中に広がっている。その雷で焼く前に、正してやる。',
       },
       {
@@ -323,7 +326,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '「書か・書き・書く・書く・書け・書け」、四段活用は完璧だ。型あってこその言霊だろ！',
       },
     ],
@@ -335,7 +338,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '峰に静寂が戻った。残るは玉座の大君だけだ。',
       },
       {
@@ -366,7 +369,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '大君。その過剰な物言いこそ、言葉の乱れの証だ。',
       },
       {
@@ -376,7 +379,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '敬語は相手を敬うためのもの。重ねすぎれば、心が遠のく。本当の敬意で、あなたを祓う！',
       },
     ],
@@ -388,7 +391,7 @@ export const ACT_STORY: Record<number, ActStory> = {
       },
       {
         speaker: '言霊使い',
-        image: null,
+        image: heroImg,
         text: '大君、どうか安らかに。言葉は、人の心をつなぐためにあるんです。',
       },
       {
@@ -407,13 +410,16 @@ export interface BossStageDef {
   weaknessLabel: string;
 }
 
+// 第9弾HP再調整: 本編ボスは平均ダメージ約60/正解（弱点の出題約6割・弱点×1.5。
+// 係り結び弱点の烏天狗のみ固定75×1.5が中心で約82/正解）を前提に、
+// 正解14〜23回程度で倒せる長さに設定した（旧: 140/210/245/280/315/360）。
 export const BOSS_STAGE_DEFS: BossStageDef[] = [
   {
     name: '惑わしの白狐',
     epithet: '言葉を惑わす千年の狐',
     emoji: '🦊',
     image: kitsuneImg,
-    hp: 140,
+    hp: 900,
     label: '第一幕：妖狐の社',
     desc: '千年の修業を経て人の言葉を惑わす妖狐。未然形の言霊で祓え。',
     weakness: 'verb',
@@ -424,7 +430,7 @@ export const BOSS_STAGE_DEFS: BossStageDef[] = [
     epithet: '嵐を呼ぶ深山の覇者',
     emoji: '👺',
     image: tenguImg,
-    hp: 210,
+    hp: 1150,
     label: '第二幕：深山の嵐',
     desc: '山林の嵐を操る漆黒の烏天狗。連用形の言霊で翼を折れ。',
     weakness: 'kakari',
@@ -435,7 +441,7 @@ export const BOSS_STAGE_DEFS: BossStageDef[] = [
     epithet: '吹雪の氷姫',
     emoji: '❄️',
     image: yukionnaImg,
-    hp: 245,
+    hp: 1200,
     label: '第三幕：雪原の社',
     desc: '吹雪の夜に現れ、言葉の主題と主格を取り違えさせる雪女。助詞の言霊で心の迷いを晴らせ。',
     weakness: 'particle',
@@ -446,7 +452,7 @@ export const BOSS_STAGE_DEFS: BossStageDef[] = [
     epithet: '千糸を繰る館の主',
     emoji: '🕷️',
     image: jorogumoImg,
-    hp: 280,
+    hp: 1300,
     label: '第四幕：糸繰りの館',
     desc: '古今で意味のずれた言葉の糸を編み、旅人を絡め取る絡新婦。単語の真の意味を見抜いて糸を断て。',
     weakness: 'word',
@@ -457,7 +463,7 @@ export const BOSS_STAGE_DEFS: BossStageDef[] = [
     epithet: '雷鳴を駆る峰の主',
     emoji: '⚡',
     image: raijuImg,
-    hp: 315,
+    hp: 1400,
     label: '第五幕：雷鳴の峰',
     desc: '雷鳴とともに峰に降り立ち、活用の型を乱して言霊を暴走させる雷獣。動詞の活用を整え、雷を鎮めよ。',
     weakness: 'conjugation',
@@ -468,7 +474,7 @@ export const BOSS_STAGE_DEFS: BossStageDef[] = [
     epithet: '怨念に囚われし宮廷の主',
     emoji: '👻',
     image: lordImg,
-    hp: 360,
+    hp: 1500,
     label: '大詰：怨霊の玉座',
     desc: 'かつて宮廷歌壇を統べた大君の怨霊。係り結びと終止形の秘術を撃ち破れ。',
     weakness: 'keigo',
@@ -483,6 +489,9 @@ export interface ZakoEnemy {
   introLine: string; defeatLine: string;
 }
 
+// 第9弾HP再調整: 前哨戦の雑魚は弱点正解3〜4回で倒せる硬さ（旧: 55〜68）。
+// 弱点ダメージは通常種別が累計47/103/168/242（コンボ1〜4回目・×1.5込み）のため 190〜230 で4正解、
+// 係り結び固定113の傘化けだけは 230 で3正解になるよう調整した。
 export const ZAKO_ENEMIES: ZakoEnemy[] = [
   {
     id: 'chochin',
@@ -491,7 +500,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '青い炎の門番',
     emoji: '🏮',
     image: chochinImg,
-    hp: 55,
+    hp: 190,
     exp: 15,
     weakness: 'verb',
     weaknessLabel: '助動詞の接続',
@@ -505,7 +514,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '一本足の嵐小僧',
     emoji: '☂️',
     image: karakasaImg,
-    hp: 58,
+    hp: 230,
     exp: 17,
     weakness: 'kakari',
     weaknessLabel: '係り結び',
@@ -519,7 +528,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '皿自慢の川童',
     emoji: '🐢',
     image: kappaImg,
-    hp: 60,
+    hp: 200,
     exp: 19,
     weakness: 'particle',
     weaknessLabel: '助詞',
@@ -533,7 +542,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '糸あそびの座敷守',
     emoji: '🧸',
     image: zashikiImg,
-    hp: 62,
+    hp: 210,
     exp: 21,
     weakness: 'word',
     weaknessLabel: '単語',
@@ -547,7 +556,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '雷太鼓の化かし手',
     emoji: '🦝',
     image: kodanukiImg,
-    hp: 65,
+    hp: 220,
     exp: 23,
     weakness: 'conjugation',
     weaknessLabel: '動詞の活用',
@@ -561,7 +570,7 @@ export const ZAKO_ENEMIES: ZakoEnemy[] = [
     epithet: '玉座の糸番人',
     emoji: '🕸️',
     image: tsuchigumoImg,
-    hp: 68,
+    hp: 230,
     exp: 25,
     weakness: 'keigo',
     weaknessLabel: '敬語',

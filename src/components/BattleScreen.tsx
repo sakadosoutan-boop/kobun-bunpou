@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stage, ChoiceOption, GameMode, RuleVariant } from '../types';
 import { BattleEffects, FloatingDamage } from './BattleEffects';
+import heroImg from '../assets/images/hero_kotodama.jpg';
 
 interface BattleScreenProps {
   stage: Stage;
@@ -20,6 +21,8 @@ interface BattleScreenProps {
   enemyHp: number;
   enemyMaxHp: number;
   playerHp: number;
+  /** プレイヤー気力の最大値（数値表示用。App 側の上限は 100） */
+  playerMaxHp: number;
   timeRemaining: number;
   score: number;
   wave: number;
@@ -53,6 +56,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   enemyHp,
   enemyMaxHp,
   playerHp,
+  playerMaxHp,
   timeRemaining,
   score,
   wave,
@@ -83,7 +87,25 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   const fieldLabel = FIELD_LABELS[gameMode];
   const isFieldHeader = fieldLabel !== undefined;
   const enemyHpPercent = Math.max(0, (enemyHp / enemyMaxHp) * 100);
-  const playerHpPercent = Math.max(0, playerHp);
+  const playerHpPercent = Math.max(0, Math.min(100, (playerHp / playerMaxHp) * 100));
+  const playerHpTier = playerHpPercent > 50 ? 'high' : playerHpPercent > 25 ? 'mid' : 'low';
+  const showEnemyHp =
+    gameMode === 'story' ||
+    gameMode === 'bossrush' ||
+    gameMode === 'endless' ||
+    gameMode === 'daily';
+
+  // プレイヤーHPの増減フィードバック（被弾=点滅/シェイク、回復=緑の発光）
+  const prevPlayerHpRef = useRef(playerHp);
+  const [playerHpFlash, setPlayerHpFlash] = useState<'hit' | 'heal' | null>(null);
+  useEffect(() => {
+    const prev = prevPlayerHpRef.current;
+    prevPlayerHpRef.current = playerHp;
+    if (playerHp === prev) return;
+    setPlayerHpFlash(playerHp < prev ? 'hit' : 'heal');
+    const timer = setTimeout(() => setPlayerHpFlash(null), 650);
+    return () => clearTimeout(timer);
+  }, [playerHp]);
 
   return (
     <div id="battle-screen" className={`screen ${isFever ? 'fever-mode' : ''}`}>
@@ -180,24 +202,29 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           {isFever && <div className="fever-aura-ring" />}
         </div>
 
-        <div className="enemy-name" id="enemy-name">
-          {stage.name}
+        <div className="enemy-meta-row">
+          <div className="enemy-name" id="enemy-name">
+            {stage.name}
+          </div>
+
+          {(gameMode === 'story' || gameMode === 'bossrush') && (
+            <div className="weakness-chip">弱点：{stage.weaknessLabel}</div>
+          )}
         </div>
 
-        {(gameMode === 'story' || gameMode === 'bossrush') && (
-          <div className="weakness-chip">弱点：{stage.weaknessLabel}</div>
-        )}
-
-        {(gameMode === 'story' ||
-          gameMode === 'bossrush' ||
-          gameMode === 'endless' ||
-          gameMode === 'daily') && (
-          <div className="hp-container">
-            <div
-              id="enemy-hp-bar"
-              className="hp-bar enemy"
-              style={{ width: `${enemyHpPercent}%` }}
-            />
+        {showEnemyHp && (
+          <div className="hp-row enemy-hp-row">
+            <span className="hp-row-label">敵HP</span>
+            <div className="hp-container enemy-hp-container">
+              <div
+                id="enemy-hp-bar"
+                className="hp-bar enemy"
+                style={{ width: `${enemyHpPercent}%` }}
+              />
+            </div>
+            <span className="hp-numeric enemy-hp-numeric" id="enemy-hp-numeric">
+              {enemyHp} / {enemyMaxHp}
+            </span>
           </div>
         )}
       </div>
@@ -236,7 +263,10 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
       </div>
 
       {/* Message Log */}
-      <div className="message-log" id="message-log">
+      <div
+        className={`message-log ${isLocked ? 'message-log-feedback' : ''}`}
+        id="message-log"
+      >
         {messageLog}
       </div>
 
@@ -285,16 +315,37 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         ))}
       </div>
 
-      {/* Player HP Status (Hidden or infinite in Time Attack) */}
-      <div className="player-status">
-        <span>あなたの気力</span>
-        <div className="hp-container" style={{ width: '52%' }}>
+      {/* Player HP Status: 1画面レイアウト内・常時表示（数値＋残量で色が変わる拡大バー） */}
+      <div
+        className={`player-status player-tier-${playerHpTier} ${
+          playerHpFlash === 'hit'
+            ? 'player-status-hit'
+            : playerHpFlash === 'heal'
+            ? 'player-status-heal'
+            : ''
+        }`}
+        id="player-status"
+      >
+        <span className="player-status-label">
+          <img src={heroImg} alt="言霊使い" className="hero-battle-icon" referrerPolicy="no-referrer" />
+          あなたの気力
+        </span>
+        <div className="hp-container player-hp-container">
           <div
             id="player-hp-bar"
-            className={`hp-bar ${playerHp <= 25 ? 'hp-danger' : ''}`}
+            className={`hp-bar ${
+              playerHpTier === 'low'
+                ? 'hp-danger'
+                : playerHpTier === 'mid'
+                ? 'hp-warning'
+                : ''
+            }`}
             style={{ width: `${playerHpPercent}%` }}
           />
         </div>
+        <span className="hp-numeric player-hp-numeric" id="player-hp-numeric">
+          {playerHp} / {playerMaxHp}
+        </span>
       </div>
     </div>
   );

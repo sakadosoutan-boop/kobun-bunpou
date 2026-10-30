@@ -79,6 +79,13 @@ import { StoryScreen } from './components/StoryScreen';
 import { ResultScreen } from './components/ResultScreen';
 import { FloatingDamage } from './components/BattleEffects';
 
+/** ボスラッシュの敵HP倍率（第9弾: 本編HP増量に合わせ 1.5 → 1.25 に緩和。気力回復なしの連戦のため） */
+const BOSS_RUSH_HP_MULTIPLIER = 1.25;
+
+/** 不正解時の反動ダメージ（第9弾: 戦闘長期化に合わせ通常/クイズ種別 20 → 10、係り結び 15 → 8 に緩和） */
+const RECOIL_DAMAGE = 10;
+const RECOIL_DAMAGE_KAKARI = 8;
+
 export const App: React.FC = () => {
   const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
   const [screen, setScreen] = useState<ScreenState>('title');
@@ -87,7 +94,7 @@ export const App: React.FC = () => {
   const ruleVariantRef = useRef<RuleVariant>('normal');
   const currentStageRef = useRef<Stage>(STAGES[0]);
   const currentBattleKindRef = useRef<WeaknessKind>('verb');
-  // 本編の前哨戦（雑魚戦）中かどうか。前哨戦は弱点分野のみ出題し、2正解で撃破できる威力にする
+  // 本編の前哨戦（雑魚戦）中かどうか。前哨戦は弱点分野のみ出題し、最大7問で決着する
   const storyInZakoRef = useRef(false);
 
   // Modals
@@ -99,8 +106,8 @@ export const App: React.FC = () => {
   // Battle State
   const [stageIndex, setStageIndex] = useState(0);
   const [currentStage, setCurrentStage] = useState<Stage>(STAGES[0]);
-  const [enemyHp, setEnemyHp] = useState(140);
-  const [enemyMaxHp, setEnemyMaxHp] = useState(140);
+  const [enemyHp, setEnemyHp] = useState(900);
+  const [enemyMaxHp, setEnemyMaxHp] = useState(900);
   const [playerHp, setPlayerHp] = useState(100);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
@@ -477,11 +484,8 @@ export const App: React.FC = () => {
     const isWeakness =
       (gameMode === 'story' || gameMode === 'bossrush') &&
       currentStageRef.current.weakness === kind;
-    let damage = isWeakness ? Math.round(base * 1.5) : base;
-    // 前哨戦: 弱点のみ出題される代わりに、2回の正解で必ず撃破できる威力を保証する
-    if (gameMode === 'story' && storyInZakoRef.current) {
-      damage = Math.max(damage, Math.ceil(currentStageRef.current.hp / 2));
-    }
+    const damage = isWeakness ? Math.round(base * 1.5) : base;
+    // 第9弾: 前哨戦の「2正解で必ず撃破」保証は廃止。雑魚HP側を正解3〜4回必要な硬さに調整済み
     return { damage, isWeakness };
   };
 
@@ -1114,7 +1118,7 @@ export const App: React.FC = () => {
     if (next) next();
   };
 
-  /** 前哨戦開始: その幕の雑魚を敵に、弱点分野のみ・最大5問のHP制バトル */
+  /** 前哨戦開始: その幕の雑魚を敵に、弱点分野のみ・最大7問のHP制バトル */
   const startZakoBattle = (act: number) => {
     const zako = ZAKO_ENEMIES.find((z) => z.actIndex === act) ?? ZAKO_ENEMIES[act];
     if (!zako) return;
@@ -1136,6 +1140,10 @@ export const App: React.FC = () => {
     setStageBoth(stage);
     setEnemyMaxHp(zako.hp);
     setEnemyHp(zako.hp);
+    // 第9弾: 戦闘ごとに気力と奥義をリセットする（ボス戦長期化へのプレイヤー側調整）
+    setPlayerHp(100);
+    setOugiGauge(0);
+    setOugiUsed(false);
     setMessageLog(<span>{zako.introLine}</span>);
     setScreen('battle');
     setupStoryTurn();
@@ -1150,6 +1158,10 @@ export const App: React.FC = () => {
     setStageBoth(stage);
     setEnemyMaxHp(stage.hp);
     setEnemyHp(stage.hp);
+    // 第9弾: 戦闘ごとに気力と奥義をリセットする（ボス戦長期化へのプレイヤー側調整）
+    setPlayerHp(100);
+    setOugiGauge(0);
+    setOugiUsed(false);
     setMessageLog(
       <span className="log-fever">
         {stage.name} あらわる！弱点は【{stage.weaknessLabel}】
@@ -1234,8 +1246,8 @@ export const App: React.FC = () => {
         return;
       }
 
-      // 本編・前哨戦: 弱点分野のみ最大5問で決着する。5問で撃破できなければ敗北扱い
-      // （弱点正解は敵HPの半分以上の威力が保証されるため、2正解で必ず撃破できる）
+      // 本編・前哨戦: 弱点分野のみ最大7問で決着する。7問で撃破できなければ敗北扱い
+      // （第9弾で雑魚HPを正解3〜4回必要な硬さに再調整したため、上限を5問から7問に拡大）
       if (
         gameMode === 'story' &&
         storyInZakoRef.current &&
@@ -1243,7 +1255,7 @@ export const App: React.FC = () => {
         nextPlayerHp > 0
       ) {
         zakoAnsweredRef.current += 1;
-        if (zakoAnsweredRef.current >= 5) {
+        if (zakoAnsweredRef.current >= 7) {
           sound.playDamage();
           setMessageLog(
             <span className="log-fail">前哨の結界を破り切れなかった…</span>
@@ -1311,7 +1323,9 @@ export const App: React.FC = () => {
             setTimeout(() => {
               const nextStage = STAGES[newIdx];
               const stageHp =
-                gameMode === 'bossrush' ? Math.round(nextStage.hp * 1.5) : nextStage.hp;
+                gameMode === 'bossrush'
+                  ? Math.round(nextStage.hp * BOSS_RUSH_HP_MULTIPLIER)
+                  : nextStage.hp;
               setEnemyMaxHp(stageHp);
               setEnemyHp(stageHp);
               setupStoryTurn();
@@ -1430,7 +1444,7 @@ export const App: React.FC = () => {
     } else if (mode === 'bossrush') {
       setStageIndex(0);
       setStageBoth(STAGES[0]);
-      const hp = Math.round(STAGES[0].hp * 1.5);
+      const hp = Math.round(STAGES[0].hp * BOSS_RUSH_HP_MULTIPLIER);
       setEnemyMaxHp(hp);
       setEnemyHp(hp);
       setPlayerHp(100);
@@ -1614,7 +1628,7 @@ export const App: React.FC = () => {
       } else {
         sound.playDamage();
         setCombo(0);
-        const recoil = 20;
+        const recoil = RECOIL_DAMAGE;
         const nextPlayerHp = Math.max(0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
         addDamagePopup(`-${recoil} ${quizKindLabel}不備`, false, true);
@@ -1701,7 +1715,7 @@ export const App: React.FC = () => {
         }, 850);
       } else {
         sound.playDamage();
-        const recoil = 15;
+        const recoil = RECOIL_DAMAGE_KAKARI;
         // 日課は全問やり切る形式のため、気力が尽きて中断しないよう下限を設ける
         const nextPlayerHp = Math.max(gameMode === 'daily' ? 1 : 0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
@@ -1810,7 +1824,7 @@ export const App: React.FC = () => {
       } else {
         sound.playDamage();
         setCombo(0);
-        const recoil = 20;
+        const recoil = RECOIL_DAMAGE;
         // 日課は全問やり切る形式のため、気力が尽きて中断しないよう下限を設ける
         const nextPlayerHp = Math.max(gameMode === 'daily' ? 1 : 0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
@@ -1901,6 +1915,7 @@ export const App: React.FC = () => {
           enemyHp={enemyHp}
           enemyMaxHp={enemyMaxHp}
           playerHp={playerHp}
+          playerMaxHp={100}
           timeRemaining={timeRemaining}
           score={score}
           wave={wave}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameMode, PlayerProfile, RuleVariant } from '../types';
 import { getHeldRankInfo, STAGES } from '../data';
+import heroImg from '../assets/images/hero_kotodama.jpg';
 
 /** 戦績カード画像（PNG）をCanvasで描画してダウンロードさせる。外部送信は行わない。 */
 function downloadResultCard(params: {
@@ -212,6 +213,8 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         <h1 className="main-title" id="result-title" style={{ fontSize: '2.1rem' }}>
           {modeTitle}
         </h1>
+
+        <img src={heroImg} alt="言霊使い" className="result-hero-img" referrerPolicy="no-referrer" />
 
         {/* EXP and Rank Update Card */}
         <div className="result-exp-card">

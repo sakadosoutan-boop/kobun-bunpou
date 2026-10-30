@@ -5,6 +5,7 @@ import { MODE_REGISTRY } from '../modes/registry';
 import { ModeDefinition } from '../modes/types';
 import { getExamStatus } from '../modes/exam';
 import { MissionPanel } from './MissionPanel';
+import heroImg from '../assets/images/hero_kotodama.jpg';
 
 interface TitleScreenProps {
   profile: PlayerProfile;
@@ -148,6 +149,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       </div>
 
       <div className="title-banner">
+        <img src={heroImg} alt="言霊使い" className="title-hero-img" referrerPolicy="no-referrer" />
         <div className="subtitle">雅なる古文文法アクション</div>
         <h1 className="main-title">言霊文法帖</h1>
         <div className="subtitle" style={{ fontSize: '1.02rem', color: 'var(--gold)' }}>
