@@ -2,6 +2,7 @@ import { VerbProblem, AuxiliaryCard, KakariProblem, Stage, GrammarEntry, CourtRa
 import kitsuneImg from './assets/images/yokai_white_kitsune_1792736500578.jpg';
 import tenguImg from './assets/images/yokai_crow_tengu_1792736501436.jpg';
 import lordImg from './assets/images/yokai_phantom_lord_1792736501784.jpg';
+import { BOSS_STAGE_DEFS } from './storyData';
 
 export const VERB_PROBLEMS: VerbProblem[] = [
   { word: "咲か", form: "未然形（四段）", targetConn: "未然形" },
@@ -427,38 +428,18 @@ wrongs: [ { text: "忘るれ", sub: "已然形"}, { text: "忘る", sub: "終止
 },
 ];
 
-export const STAGES: Stage[] = [
-  {
-    name: "惑わしの白狐",
-    emoji: "🦊",
-    image: kitsuneImg,
-    hp: 140,
-    label: "第一幕：妖狐の社",
-    desc: "千年の修業を経て人の言葉を惑わす妖狐。未然形の言霊で祓え。",
-    weakness: "verb",
-    weaknessLabel: "助動詞の接続"
-  },
-  {
-    name: "迷妄の烏天狗",
-    emoji: "👺",
-    image: tenguImg,
-    hp: 210,
-    label: "第二幕：深山の嵐",
-    desc: "山林の嵐を操る漆黒の烏天狗。連用形の言霊で翼を折れ。",
-    weakness: "kakari",
-    weaknessLabel: "係り結び"
-  },
-  {
-    name: "文法怨霊・藤原の大君",
-    emoji: "👻",
-    image: lordImg,
-    hp: 300,
-    label: "大詰：怨霊の玉座",
-    desc: "かつて宮廷歌壇を統べた大君の怨霊。係り結びと終止形の秘術を撃ち破れ。",
-    weakness: "keigo",
-    weaknessLabel: "敬語"
-  }
-];
+// 本編ステージ（全六幕）: 第8弾のボス定義（storyData.ts の BOSS_STAGE_DEFS）から生成する。
+// epithet は Stage 型に無いため落とし、その他の必須項目をそのままマッピングする。
+export const STAGES: Stage[] = BOSS_STAGE_DEFS.map((def) => ({
+  name: def.name,
+  emoji: def.emoji,
+  image: def.image,
+  hp: def.hp,
+  label: def.label,
+  desc: def.desc,
+  weakness: def.weakness,
+  weaknessLabel: def.weaknessLabel,
+}));
 
 // Endless Mode dynamic Yokai generator
 export function generateEndlessStage(wave: number): Stage {

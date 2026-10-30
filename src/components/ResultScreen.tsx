@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameMode, PlayerProfile, RuleVariant } from '../types';
-import { getHeldRankInfo } from '../data';
+import { getHeldRankInfo, STAGES } from '../data';
 
 /** 戦績カード画像（PNG）をCanvasで描画してダウンロードさせる。外部送信は行わない。 */
 function downloadResultCard(params: {
@@ -102,6 +102,8 @@ interface ResultScreenProps {
   wave: number;
   score: number;
   expGained: number;
+  /** クリア特典の表示文（本編クリア時のみ。EXPは expGained に合算済み） */
+  bonusText?: string | null;
   newTitles: string[];
   profile: PlayerProfile;
   onRestartSameMode: () => void;
@@ -120,6 +122,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   wave,
   score,
   expGained,
+  bonusText,
   newTitles,
   profile,
   onRestartSameMode,
@@ -140,7 +143,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
   let modeHeading = FIELD_HEADINGS[gameMode] ?? '本編討伐・結末';
   let modeTitle = isWin ? '免許皆伝！' : '気力尽きたり';
-  let modeSubtitle = isWin ? '全三幕制覇・言霊成就' : '無念・再起を期す';
+  let modeSubtitle = isWin ? '全六幕制覇・言霊成就' : '無念・再起を期す';
 
   if (gameMode === 'endless') {
     modeHeading = '百鬼夜行・討伐記録';
@@ -176,7 +179,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         : '怨念は全て回収されたり';
   } else if (gameMode === 'bossrush') {
     modeHeading = '連戦の間・記録';
-    modeTitle = isWin ? '三連戦制覇！' : '連戦終幕';
+    modeTitle = isWin ? '六連戦制覇！' : '連戦終幕';
     modeSubtitle = isWin ? '回復なき連戦を制したり' : '大増量の妖怪に屈したり';
   } else if (gameMode === 'exam') {
     modeHeading = '昇進試験・結果';
@@ -220,6 +223,13 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           </div>
         </div>
 
+        {/* クリア特典（本編クリア時のみ表示。EXPは獲得分に合算済み） */}
+        {bonusText && (
+          <div className="story-bonus-banner">
+            🎁 {bonusText}
+          </div>
+        )}
+
         {/* Unlocked Titles Notification */}
         {newTitles.length > 0 && (
           <div className="new-titles-banner">
@@ -237,7 +247,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           {gameMode === 'story' && (
             <div className="stat-col">
               <span className="stat-label">討伐幕数</span>
-              <span className="stat-value">{stagesCleared} / 3</span>
+              <span className="stat-value">{stagesCleared} / {STAGES.length}</span>
             </div>
           )}
           {gameMode === 'endless' && (
@@ -265,7 +275,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           {gameMode === 'bossrush' && (
             <div className="stat-col">
               <span className="stat-label">討伐幕数</span>
-              <span className="stat-value">{stagesCleared} / 3</span>
+              <span className="stat-value">{stagesCleared} / {STAGES.length}</span>
             </div>
           )}
           {gameMode === 'daily' && (

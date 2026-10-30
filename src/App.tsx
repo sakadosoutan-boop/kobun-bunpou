@@ -9,6 +9,7 @@ import {
   Stage,
   PlayerProfile,
   RuleVariant,
+  WeaknessKind,
 } from './types';
 import {
   VERB_PROBLEMS,
@@ -18,6 +19,8 @@ import {
   READING_PROBLEMS,
   CONJUGATION_PROBLEMS,
   KEIGO_PROBLEMS,
+  WORD_PROBLEMS,
+  PARTICLE_PROBLEMS,
   STAGES,
   generateEndlessStage,
   checkNewTitles,
@@ -56,6 +59,14 @@ import {
   ensureWeeklyMissions,
   MissionMetric,
 } from './modes/missions';
+import {
+  ACT_STORY,
+  ENDING_PANELS,
+  PROLOGUE_PANELS,
+  StoryPanel,
+  ZAKO_ENEMIES,
+  ZakoEnemy,
+} from './storyData';
 import { sound } from './sound';
 import { SakuraCanvas } from './components/SakuraCanvas';
 import { TitleScreen } from './components/TitleScreen';
@@ -64,6 +75,7 @@ import { GrammarModal } from './components/GrammarModal';
 import { ReviewModal } from './components/ReviewModal';
 import { CompendiumModal } from './components/CompendiumModal';
 import { BattleScreen } from './components/BattleScreen';
+import { StoryScreen } from './components/StoryScreen';
 import { ResultScreen } from './components/ResultScreen';
 import { FloatingDamage } from './components/BattleEffects';
 
@@ -74,7 +86,9 @@ export const App: React.FC = () => {
   const [ruleVariant, setRuleVariant] = useState<RuleVariant>('normal');
   const ruleVariantRef = useRef<RuleVariant>('normal');
   const currentStageRef = useRef<Stage>(STAGES[0]);
-  const currentBattleKindRef = useRef<'verb' | 'kakari' | 'keigo'>('verb');
+  const currentBattleKindRef = useRef<WeaknessKind>('verb');
+  // 本編の前哨戦（雑魚戦）中かどうか。前哨戦は弱点分野のみ出題し、2正解で撃破できる威力にする
+  const storyInZakoRef = useRef(false);
 
   // Modals
   const [isRuleOpen, setIsRuleOpen] = useState(false);
@@ -121,6 +135,22 @@ export const App: React.FC = () => {
   const [isReviewDrill, setIsReviewDrill] = useState(false);
   const reviewDrillIndex = useRef(0);
 
+  // 本編ストーリーフロー（第8弾）: 表示中のシーンと、その終了後に実行する遷移
+  const [storyScene, setStoryScene] = useState<{
+    key: string;
+    panels: StoryPanel[];
+    heading: string;
+    wasSeen: boolean;
+  } | null>(null);
+  const storyNextRef = useRef<(() => void) | null>(null);
+  const storyActRef = useRef(0);
+  const storyZakoRef = useRef<ZakoEnemy | null>(null);
+  const zakoAnsweredRef = useRef(0);
+  /** 前哨戦の撃破EXPの累計（結果画面の獲得EXPに合算する） */
+  const bonusExpRef = useRef(0);
+  const [clearBonusText, setClearBonusText] = useState<string | null>(null);
+  const profileRef = useRef<PlayerProfile>(DEFAULT_PROFILE);
+
   const isFeverRef = useRef(false);
   const currentProblemRef = useRef<VerbProblem | null>(null);
   const currentKakariRef = useRef<KakariProblem | null>(null);
@@ -159,6 +189,11 @@ export const App: React.FC = () => {
     targetForm: string;
     isKakari: boolean;
   } | null>(null);
+
+  // 最新プロフィールへの参照（タイマー経由のコールバックから初回クリア判定などに使う）
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   // Load saved profile on startup
   useEffect(() => {
@@ -349,12 +384,75 @@ export const App: React.FC = () => {
     setIsLocked(false);
   }, []);
 
-  // Story / bossrush turn generator weighted toward the current boss's weakness (~60%)
+  // Word / particle / conjugation quiz turn inside story / bossrush flow.
+  // Rendering mirrors the session-queue renderer (setupSessionTurn) but damage is HP-based:
+  // the answer is handled by the generic quiz branch in handleCardClick via currentQuizRef.
+  const setupStoryQuizTurn = useCallback((kind: 'word' | 'particle' | 'conjugation') => {
+    isFeverRef.current = false;
+    setIsFever(false);
+    currentKakariRef.current = null;
+    currentProblemRef.current = null;
+    currentBattleKindRef.current = kind;
+    if (kind === 'word') {
+      const problem = WORD_PROBLEMS[Math.floor(Math.random() * WORD_PROBLEMS.length)];
+      setSentenceText(problem.sentence);
+      setSentenceHighlight(problem.targetText);
+      setGuideText(`古文単語「${problem.word}」の意味を選べ`);
+      setTargetWord(problem.targetText);
+      setTargetForm(`「${problem.word}」の意味は？`);
+      currentQuizRef.current = {
+        reviewKey: `word:${problem.id}`,
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: problem.targetText,
+        targetForm: `単語（${problem.word}）`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else if (kind === 'particle') {
+      const problem = PARTICLE_PROBLEMS[Math.floor(Math.random() * PARTICLE_PROBLEMS.length)];
+      setSentenceText(problem.sentence);
+      setSentenceHighlight(problem.targetText);
+      setGuideText(`助詞「${problem.particle}」の働きを選べ`);
+      setTargetWord(problem.targetText);
+      setTargetForm(`出典：${problem.source}｜助詞「${problem.particle}」`);
+      currentQuizRef.current = {
+        reviewKey: `particle:${problem.id}`,
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: problem.targetText,
+        targetForm: `助詞（${problem.particle}・${problem.category}）`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    } else {
+      const problem = CONJUGATION_PROBLEMS[Math.floor(Math.random() * CONJUGATION_PROBLEMS.length)];
+      setSentenceText(null);
+      setSentenceHighlight(null);
+      setGuideText(`「${problem.verb}」の${problem.targetForm}を選べ`);
+      setTargetWord(problem.verb);
+      setTargetForm(`${problem.className}活用・${problem.targetForm}`);
+      currentQuizRef.current = {
+        reviewKey: `conj:${problem.verb}:${problem.targetForm}`,
+        correctAnswer: problem.correct,
+        explanation: problem.explanation,
+        targetWord: `${problem.verb}（${problem.targetForm}）`,
+        targetForm: `${problem.className}活用・${problem.targetForm}`,
+        isKakari: false,
+      };
+      setCards(buildLabelChoices(problem.correct, problem.wrongs));
+    }
+    setIsLocked(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Story / bossrush turn generator weighted toward the current boss's weakness (~60%).
+  // In a zako (前哨戦) battle the weakness field is served exclusively.
   const setupStoryTurn = useCallback(() => {
     const weakness = currentStageRef.current.weakness;
-    const kinds: ('verb' | 'kakari' | 'keigo')[] = ['verb', 'kakari', 'keigo'];
-    let kind: 'verb' | 'kakari' | 'keigo';
-    if (Math.random() < 0.6) {
+    const kinds: WeaknessKind[] = ['verb', 'kakari', 'keigo', 'word', 'particle', 'conjugation'];
+    let kind: WeaknessKind;
+    if (storyInZakoRef.current || Math.random() < 0.6) {
       kind = weakness;
     } else {
       const others = kinds.filter((k) => k !== weakness);
@@ -364,20 +462,27 @@ export const App: React.FC = () => {
       triggerKakariMusubi();
     } else if (kind === 'keigo') {
       setupStoryKeigoTurn();
+    } else if (kind === 'word' || kind === 'particle' || kind === 'conjugation') {
+      setupStoryQuizTurn(kind);
     } else {
       setupNormalTurn();
     }
-  }, [setupNormalTurn, triggerKakariMusubi, setupStoryKeigoTurn]);
+  }, [setupNormalTurn, triggerKakariMusubi, setupStoryKeigoTurn, setupStoryQuizTurn]);
 
   /** Weakness damage: x1.5 (rounded) when the question field matches the boss weakness (story/bossrush only) */
   const calcBattleDamage = (
     base: number,
-    kind: 'verb' | 'kakari' | 'keigo'
+    kind: WeaknessKind
   ): { damage: number; isWeakness: boolean } => {
     const isWeakness =
       (gameMode === 'story' || gameMode === 'bossrush') &&
       currentStageRef.current.weakness === kind;
-    return { damage: isWeakness ? Math.round(base * 1.5) : base, isWeakness };
+    let damage = isWeakness ? Math.round(base * 1.5) : base;
+    // 前哨戦: 弱点のみ出題される代わりに、2回の正解で必ず撃破できる威力を保証する
+    if (gameMode === 'story' && storyInZakoRef.current) {
+      damage = Math.max(damage, Math.ceil(currentStageRef.current.hp / 2));
+    }
+    return { damage, isWeakness };
   };
 
   // Daily mode turn: serve the date-seeded queue in order (verb & kakari mixed)
@@ -865,6 +970,21 @@ export const App: React.FC = () => {
         earnedExp = win ? 150 + finalScore * 8 : finalScore * 5;
       }
 
+      // 第8弾: 前哨戦の撃破EXPを合算し、本編クリア時は制覇特典を上乗せする
+      if (gameMode === 'story') {
+        earnedExp += bonusExpRef.current;
+        if (win) {
+          const firstClear = profileRef.current.storyClears === 0;
+          const clearBonus = firstClear ? 150 : 50;
+          earnedExp += clearBonus;
+          setClearBonusText(
+            firstClear
+              ? `初回クリア特典：+${clearBonus} 徳（EXP）ボーナス`
+              : `制覇特典：+${clearBonus} 徳（EXP）ボーナス`
+          );
+        }
+      }
+
       setExpGained(earnedExp);
       setIsWin(win);
 
@@ -946,6 +1066,145 @@ export const App: React.FC = () => {
     finishBattleRun(true, sessionActiveRef.current ? sessionCorrectRef.current : score, 0);
   }, [finishBattleRun, score]);
 
+  // 常に最新の finishBattleRun を指す参照（シーン遷移コールバック経由の終了処理用）
+  const finishBattleRunRef = useRef(finishBattleRun);
+  finishBattleRunRef.current = finishBattleRun;
+
+  /** ステージ表示と参照を同時に切り替える */
+  const setStageBoth = (stage: Stage) => {
+    setCurrentStage(stage);
+    currentStageRef.current = stage;
+  };
+
+  // ── 本編ストーリーフロー（第8弾） ─────────────────────────────
+  /** シーンを既読として記録する（重複登録しない） */
+  const markStorySeen = (key: string) => {
+    setProfile((prev) => {
+      const seen = prev.seenStoryScenes ?? [];
+      if (seen.includes(key)) return prev;
+      const updated = { ...prev, seenStoryScenes: [...seen, key] };
+      savePlayerProfile(updated);
+      return updated;
+    });
+  };
+
+  /** ストーリーシーンを表示し、終了時の遷移先を登録する */
+  const showStoryScene = (
+    key: string,
+    panels: StoryPanel[],
+    heading: string,
+    next: () => void
+  ) => {
+    setStoryScene({
+      key,
+      panels,
+      heading,
+      wasSeen: (profileRef.current.seenStoryScenes ?? []).includes(key),
+    });
+    storyNextRef.current = next;
+    setScreen('story');
+  };
+
+  /** StoryScreen の終了（全コマ送り／スキップ共通）: 既読化して次のフェーズへ */
+  const handleStoryFinish = () => {
+    if (storyScene) markStorySeen(storyScene.key);
+    const next = storyNextRef.current;
+    storyNextRef.current = null;
+    setStoryScene(null);
+    if (next) next();
+  };
+
+  /** 前哨戦開始: その幕の雑魚を敵に、弱点分野のみ・最大5問のHP制バトル */
+  const startZakoBattle = (act: number) => {
+    const zako = ZAKO_ENEMIES.find((z) => z.actIndex === act) ?? ZAKO_ENEMIES[act];
+    if (!zako) return;
+    storyActRef.current = act;
+    storyZakoRef.current = zako;
+    storyInZakoRef.current = true;
+    zakoAnsweredRef.current = 0;
+    const stage: Stage = {
+      name: zako.name,
+      emoji: zako.emoji,
+      image: zako.image,
+      hp: zako.hp,
+      label: `${STAGES[act].label}・前哨戦`,
+      desc: zako.introLine,
+      weakness: zako.weakness,
+      weaknessLabel: zako.weaknessLabel,
+    };
+    setStageIndex(act);
+    setStageBoth(stage);
+    setEnemyMaxHp(zako.hp);
+    setEnemyHp(zako.hp);
+    setMessageLog(<span>{zako.introLine}</span>);
+    setScreen('battle');
+    setupStoryTurn();
+  };
+
+  /** ボス戦開始: 既存の敵HP制バトル（弱点は6分野対応済み） */
+  const startBossBattle = (act: number) => {
+    storyActRef.current = act;
+    storyInZakoRef.current = false;
+    const stage = STAGES[act];
+    setStageIndex(act);
+    setStageBoth(stage);
+    setEnemyMaxHp(stage.hp);
+    setEnemyHp(stage.hp);
+    setMessageLog(
+      <span className="log-fever">
+        {stage.name} あらわる！弱点は【{stage.weaknessLabel}】
+      </span>
+    );
+    setScreen('battle');
+    setupStoryTurn();
+  };
+
+  /** 幕の導入シーン → 前哨戦へ */
+  const startActIntro = (act: number) => {
+    storyActRef.current = act;
+    showStoryScene(`act${act}-intro`, ACT_STORY[act].intro, STAGES[act].label, () =>
+      startZakoBattle(act)
+    );
+  };
+
+  /** 本編開始: プロローグ未読ならプロローグから、既読なら第一幕の導入から */
+  const beginStoryFlow = () => {
+    storyActRef.current = 0;
+    const seen = profile.seenStoryScenes ?? [];
+    if (!seen.includes('prologue')) {
+      showStoryScene('prologue', PROLOGUE_PANELS, 'プロローグ', () => startActIntro(0));
+    } else {
+      startActIntro(0);
+    }
+  };
+
+  /** タイトル「物語を振り返る」からのシーン再生。終了後はタイトルへ戻る */
+  const replayStoryScene = (key: string) => {
+    let panels: StoryPanel[] | null = null;
+    let heading = '物語';
+    if (key === 'prologue') {
+      panels = PROLOGUE_PANELS;
+      heading = 'プロローグ';
+    } else if (key === 'ending') {
+      panels = ENDING_PANELS;
+      heading = 'エンディング';
+    } else {
+      const m = key.match(/^act(\d+)-(intro|boss|defeat)$/);
+      if (m) {
+        const act = Number(m[1]);
+        const part = m[2] as 'intro' | 'boss' | 'defeat';
+        const story = ACT_STORY[act];
+        if (story) {
+          panels = part === 'intro' ? story.intro : part === 'boss' ? story.bossIntro : story.bossDefeat;
+          heading = STAGES[act]?.label ?? heading;
+        }
+      }
+    }
+    if (!panels) return;
+    sound.init();
+    showStoryScene(key, panels, heading, () => setScreen('title'));
+  };
+
   // Turn outcome evaluation
   const evaluateNextTurn = useCallback(
     (
@@ -975,9 +1234,72 @@ export const App: React.FC = () => {
         return;
       }
 
+      // 本編・前哨戦: 弱点分野のみ最大5問で決着する。5問で撃破できなければ敗北扱い
+      // （弱点正解は敵HPの半分以上の威力が保証されるため、2正解で必ず撃破できる）
+      if (
+        gameMode === 'story' &&
+        storyInZakoRef.current &&
+        nextEnemyHp > 0 &&
+        nextPlayerHp > 0
+      ) {
+        zakoAnsweredRef.current += 1;
+        if (zakoAnsweredRef.current >= 5) {
+          sound.playDamage();
+          setMessageLog(
+            <span className="log-fail">前哨の結界を破り切れなかった…</span>
+          );
+          finishBattleRun(false, score, currentWave);
+          return;
+        }
+      }
+
       // Story & Endless Mode HP handling
       if (nextEnemyHp <= 0) {
-        if (gameMode === 'story' || gameMode === 'bossrush') {
+        if (gameMode === 'story') {
+          // 本編はストーリーフローで遷移する: 前哨戦→ボス登場シーン、ボス→撃破シーン→次の幕／エンディング
+          const act = storyActRef.current;
+          addEnemyDefeatMission();
+          sound.playFanfare();
+          if (storyInZakoRef.current) {
+            const zako = storyZakoRef.current;
+            storyInZakoRef.current = false;
+            if (zako) bonusExpRef.current += zako.exp;
+            setMessageLog(
+              <span className="log-success">
+                {zako ? zako.defeatLine : '前哨を祓った！'}（前哨戦ボーナス +{zako?.exp ?? 0} 徳）ボスが姿を現す…
+              </span>
+            );
+            setTimeout(() => {
+              showStoryScene(`act${act}-boss`, ACT_STORY[act].bossIntro, STAGES[act].label, () =>
+                startBossBattle(act)
+              );
+            }, 1300);
+          } else if (act + 1 < STAGES.length) {
+            setMessageLog(<span className="log-success">妖怪を討滅！</span>);
+            setTimeout(() => {
+              showStoryScene(
+                `act${act}-defeat`,
+                ACT_STORY[act].bossDefeat,
+                STAGES[act].label,
+                () => startActIntro(act + 1)
+              );
+            }, 1000);
+          } else {
+            setTimeout(() => {
+              showStoryScene(
+                `act${act}-defeat`,
+                ACT_STORY[act].bossDefeat,
+                STAGES[act].label,
+                () =>
+                  showStoryScene('ending', ENDING_PANELS, 'エンディング', () =>
+                    finishBattleRunRef.current(true)
+                  )
+              );
+            }, 1000);
+          }
+          return;
+        }
+        if (gameMode === 'bossrush') {
           if (currentStageIdx + 1 < STAGES.length) {
             const newIdx = currentStageIdx + 1;
             setStageIndex(newIdx);
@@ -1026,8 +1348,8 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Check if fever triggers
-      if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever) {
+      // Check if fever triggers（前哨戦は弱点分野のみ出題するためフィーバーを挟まない）
+      if (nextCombo > 0 && nextCombo % 3 === 0 && !justDidFever && !storyInZakoRef.current) {
         triggerKakariMusubi();
       } else if (gameMode === 'story' || gameMode === 'bossrush') {
         setupStoryTurn();
@@ -1074,11 +1396,13 @@ export const App: React.FC = () => {
     isFeverRef.current = false;
     setIsFever(false);
     currentBattleKindRef.current = 'verb';
-
-    const setStageBoth = (stage: Stage) => {
-      setCurrentStage(stage);
-      currentStageRef.current = stage;
-    };
+    // ストーリーフロー状態のリセット
+    storyInZakoRef.current = false;
+    storyZakoRef.current = null;
+    storyNextRef.current = null;
+    setStoryScene(null);
+    bonusExpRef.current = 0;
+    setClearBonusText(null);
 
     if (mode === 'story') {
       setStageIndex(0);
@@ -1150,12 +1474,17 @@ export const App: React.FC = () => {
     }
 
     setMessageLog('言霊を繰り出せ！');
+    if (mode === 'story') {
+      // 本編はストーリーフロー（プロローグ→各幕の導入→前哨戦→ボス戦…）から開始する
+      beginStoryFlow();
+      return;
+    }
     setScreen('battle');
     if (mode === 'daily') {
       setupDailyTurn(0);
     } else if (sessionActiveRef.current) {
       setupSessionTurn(0);
-    } else if (mode === 'story' || mode === 'bossrush') {
+    } else if (mode === 'bossrush') {
       setupStoryTurn();
     } else {
       setupNormalTurn();
@@ -1230,12 +1559,17 @@ export const App: React.FC = () => {
       return updated;
     });
 
+    // Generic quiz branch (keigo / word / particle / conjugation) in story & bossrush:
+    // session-style rendering, HP-based damage with weakness x1.5 via calcBattleDamage.
+    const quizKind = currentBattleKindRef.current;
     if (
-      currentBattleKindRef.current === 'keigo' &&
+      (quizKind === 'keigo' || quizKind === 'word' || quizKind === 'particle' || quizKind === 'conjugation') &&
       (gameMode === 'story' || gameMode === 'bossrush') &&
       currentQuizRef.current
     ) {
       const quiz = currentQuizRef.current;
+      const quizKindLabel =
+        quizKind === 'keigo' ? '敬語' : quizKind === 'word' ? '単語' : quizKind === 'particle' ? '助詞' : '活用';
       if (card.isCorrect) {
         sound.playSlash();
         sound.playDrum();
@@ -1244,15 +1578,17 @@ export const App: React.FC = () => {
         if (nextCombo > maxCombo) setMaxCombo(nextCombo);
         chargeOugi();
         setProfile((prev) => {
-          const updated = applyMissions(
-            { ...prev, totalCorrect: prev.totalCorrect + 1 },
-            'totalCorrect',
-            'keigoCorrect'
-          );
+          const base = { ...prev, totalCorrect: prev.totalCorrect + 1 };
+          const updated =
+            quizKind === 'keigo'
+              ? applyMissions(base, 'totalCorrect', 'keigoCorrect')
+              : quizKind === 'conjugation'
+              ? applyMissions(base, 'totalCorrect', 'conjugationCorrect')
+              : applyMissions(base, 'totalCorrect');
           savePlayerProfile(updated);
           return updated;
         });
-        const { damage, isWeakness } = calcBattleDamage(25 + nextCombo * 6, 'keigo');
+        const { damage, isWeakness } = calcBattleDamage(25 + nextCombo * 6, quizKind);
         const nextEnemyHp = Math.max(0, enemyHp - damage);
         setEnemyHp(nextEnemyHp);
         addDamagePopup(
@@ -1281,7 +1617,7 @@ export const App: React.FC = () => {
         const recoil = 20;
         const nextPlayerHp = Math.max(0, playerHp - recoil);
         setPlayerHp(nextPlayerHp);
-        addDamagePopup(`-${recoil} 敬語不備`, false, true);
+        addDamagePopup(`-${recoil} ${quizKindLabel}不備`, false, true);
         setMistakes((prev) => [
           ...prev,
           {
@@ -1528,10 +1864,21 @@ export const App: React.FC = () => {
     <div id="game-container" className={isShaking ? 'shake' : ''}>
       <SakuraCanvas isStormMode={isFever} />
 
+      {screen === 'story' && storyScene && (
+        <StoryScreen
+          key={storyScene.key}
+          panels={storyScene.panels}
+          heading={storyScene.heading}
+          isSeen={storyScene.wasSeen}
+          onFinish={handleStoryFinish}
+        />
+      )}
+
       {screen === 'title' && (
         <TitleScreen
           profile={profile}
           onStartMode={handleStartMode}
+          onReplayStory={replayStoryScene}
           onOpenRules={() => setIsRuleOpen(true)}
           onOpenGrammar={() => setIsGrammarOpen(true)}
           onOpenCompendium={() => setIsCompendiumOpen(true)}
@@ -1582,10 +1929,11 @@ export const App: React.FC = () => {
           ruleVariant={ruleVariant}
           maxCombo={maxCombo}
           mistakesCount={mistakes.length}
-          stagesCleared={isWin ? 3 : stageIndex}
+          stagesCleared={isWin ? STAGES.length : stageIndex}
           wave={wave}
           score={score}
           expGained={expGained}
+          bonusText={gameMode === 'story' && isWin ? clearBonusText : null}
           newTitles={newTitles}
           profile={profile}
           onRestartSameMode={() => handleStartMode(gameMode, ruleVariant)}

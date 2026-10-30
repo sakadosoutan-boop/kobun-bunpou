@@ -32,8 +32,8 @@ export interface KakariProblem {
   wrongs: KakariChoice[];
 }
 
-/** ボスの弱点分野（本編・ボスラッシュで加重出題＆ダメージ1.5倍） */
-export type WeaknessKind = 'verb' | 'kakari' | 'keigo';
+/** ボスの弱点分野（本編・ボスラッシュで加重出題＆ダメージ1.5倍）。SessionQuestion の kind と対応する */
+export type WeaknessKind = 'verb' | 'kakari' | 'keigo' | 'word' | 'particle' | 'conjugation';
 
 export interface Stage {
   name: string;
@@ -216,7 +216,7 @@ export interface ReviewQueueItem {
   nextDue: string;
 }
 
-export type ScreenState = 'title' | 'battle' | 'result';
+export type ScreenState = 'title' | 'battle' | 'result' | 'story';
 /**
  * ゲームモード（第5弾で再編）。
  * 独立モードだった meaning / reading / conjugation / timeattack / suddendeath は廃止し、
@@ -277,4 +277,10 @@ export interface PlayerProfile {
    * 旧セーブに無い場合は読み込み時にEXPから導出した位階で初期化される。
    */
   promotedRank: number;
+  /**
+   * 既読の本編ストーリーシーンのキー一覧（第8弾）。
+   * 'prologue' / 'ending' / `act${i}-intro` / `act${i}-boss` / `act${i}-defeat`（i は 0〜5）。
+   * 旧セーブに無い場合は読み込み時に空配列で初期化される。
+   */
+  seenStoryScenes: string[];
 }

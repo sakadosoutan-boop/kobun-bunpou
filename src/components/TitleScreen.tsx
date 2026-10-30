@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameMode, PlayerProfile, RuleVariant } from '../types';
-import { getHeldRankInfo } from '../data';
+import { getHeldRankInfo, STAGES } from '../data';
 import { MODE_REGISTRY } from '../modes/registry';
 import { ModeDefinition } from '../modes/types';
 import { getExamStatus } from '../modes/exam';
@@ -9,6 +9,8 @@ import { MissionPanel } from './MissionPanel';
 interface TitleScreenProps {
   profile: PlayerProfile;
   onStartMode: (mode: GameMode, rule: RuleVariant) => void;
+  /** 既読ストーリーシーンの再生（キー: prologue / ending / act{i}-intro|boss|defeat） */
+  onReplayStory: (sceneKey: string) => void;
   onOpenRules: () => void;
   onOpenGrammar: () => void;
   onOpenCompendium: () => void;
@@ -25,6 +27,7 @@ const RULE_BUTTONS: { rule: RuleVariant; label: string; sub: string }[] = [
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   profile,
   onStartMode,
+  onReplayStory,
   onOpenRules,
   onOpenGrammar,
   onOpenCompendium,
@@ -34,6 +37,30 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   const { currentRank } = getHeldRankInfo(profile);
   const examStatus = getExamStatus(profile);
   const [expandedField, setExpandedField] = useState<GameMode | null>(null);
+  const [storyArchiveOpen, setStoryArchiveOpen] = useState(false);
+
+  // 既読シーンの一覧（物語を振り返る）。エンディングは本編クリア済みのときのみ再生できる
+  const seenScenes = profile.seenStoryScenes ?? [];
+  const archiveScenes: { key: string; label: string }[] = [];
+  if (seenScenes.includes('prologue')) {
+    archiveScenes.push({ key: 'prologue', label: 'プロローグ' });
+  }
+  STAGES.forEach((stage, i) => {
+    const parts: { suffix: string; name: string }[] = [
+      { suffix: 'intro', name: '導入' },
+      { suffix: 'boss', name: 'ボス登場' },
+      { suffix: 'defeat', name: '撃破' },
+    ];
+    parts.forEach(({ suffix, name }) => {
+      const key = `act${i}-${suffix}`;
+      if (seenScenes.includes(key)) {
+        archiveScenes.push({ key, label: `${stage.label}・${name}` });
+      }
+    });
+  });
+  if (seenScenes.includes('ending') && profile.storyClears > 0) {
+    archiveScenes.push({ key: 'ending', label: 'エンディング' });
+  }
 
   const renderModeButton = (mode: ModeDefinition) => {
     const badge = mode.getBadge ? mode.getBadge(profile) : null;
@@ -138,9 +165,35 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
 
         <div className="mode-section-heading">【本編討伐】</div>
         <p className="mode-section-note">
-          弱点：妖狐＝助動詞の接続／烏天狗＝係り結び／藤原の大君＝敬語。弱点の出題が約6割出て、正解でダメージ1.5倍！
+          弱点：妖狐＝助動詞の接続／烏天狗＝係り結び／雪女＝助詞／絡新婦＝単語／雷獣＝動詞の活用／藤原の大君＝敬語。弱点の出題が約6割出て、正解でダメージ1.5倍！各幕では前哨戦（雑魚）も待ち受ける。
         </p>
         {storyModes.map(renderModeButton)}
+
+        {/* 物語を振り返る: 既読シーンの再生 */}
+        <div className="story-archive">
+          <button
+            className="btn-sub story-archive-toggle"
+            onClick={() => setStoryArchiveOpen((v) => !v)}
+          >
+            📖 物語を振り返る（{archiveScenes.length}）
+          </button>
+          {storyArchiveOpen &&
+            (archiveScenes.length === 0 ? (
+              <p className="mode-section-note">まだ物語の記録はない。本編を進めると、読んだ場面をここで読み返せる。</p>
+            ) : (
+              <div className="story-archive-list">
+                {archiveScenes.map((scene) => (
+                  <button
+                    key={scene.key}
+                    className="story-archive-item"
+                    onClick={() => onReplayStory(scene.key)}
+                  >
+                    {scene.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+        </div>
 
         <div className="mode-section-heading">【文法修練】</div>
         <p className="mode-section-note">分野を選ぶとルール（通常／一閃／斬撃）を選べる</p>

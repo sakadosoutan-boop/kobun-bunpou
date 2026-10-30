@@ -18,6 +18,7 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   reviewQueue: [],
   weeklyMissions: { weekKey: '', missionIds: [], targets: {}, progress: {}, claimed: [] },
   promotedRank: 0,
+  seenStoryScenes: [],
 };
 
 export function loadPlayerProfile(): PlayerProfile {
@@ -29,6 +30,10 @@ export function loadPlayerProfile(): PlayerProfile {
     // 旧セーブ移行: 昇進試験導入前にEXPだけで決まっていた位階を保持位階として引き継ぐ
     if (typeof parsed.promotedRank !== 'number') {
       merged.promotedRank = getRankIndexByExp(merged.exp);
+    }
+    // 旧セーブ移行: 第8弾で追加した既読シーン管理が無い／壊れている場合は空配列にする
+    if (!Array.isArray(merged.seenStoryScenes)) {
+      merged.seenStoryScenes = [];
     }
     return merged;
   } catch (e) {
